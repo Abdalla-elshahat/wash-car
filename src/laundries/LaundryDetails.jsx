@@ -6,8 +6,19 @@ import {
   ToggleLeft, ToggleRight, Hash, Pencil, X, Trash2, ShieldAlert,
 } from "lucide-react";
 import { toast } from "react-toastify";
+import Cookies from "js-cookie";
+import Swal from "sweetalert2";
 import Navbar from "../component/Navbar/Navbar";
-import { getLaundryById, updateLaundry, deleteLaundry, updateLaundryStatus } from "../apicalls/laundry";
+import { 
+  getLaundryById, 
+  updateLaundry, 
+  deleteLaundry, 
+  updateLaundryStatus, 
+  getLaundryReviews, 
+  createLaundryReview,
+  updateLaundryReview,
+  deleteLaundryReview
+} from "../apicalls/laundry";
 import { Domain } from "../utels/const";
 import "./LaundryDetails.css";
 
@@ -265,9 +276,21 @@ export default function LaundryDetails() {
   const [deleting,    setDeleting]    = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editingRating, setEditingRating] = useState(5);
+  const [editingComment, setEditingComment] = useState("");
+  const [updatingReview, setUpdatingReview] = useState(false);
+
   useEffect(() => {
     async function load() {
       try {
+        setLoading(true);
         const data = await getLaundryById(id);
         setLaundry(data);
       } catch (err) {
@@ -276,12 +299,27 @@ export default function LaundryDetails() {
         setLoading(false);
       }
     }
+    async function loadReviews() {
+      try {
+        setReviewsLoading(true);
+        const data = await getLaundryReviews(id);
+        setReviews(data);
+      } catch (err) {
+        console.error("Failed to load reviews:", err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    }
     load();
+    loadReviews();
   }, [id]);
 
   const [togglingActive, setTogglingActive] = useState(false);
   const userRole = localStorage.getItem("userRole");
   const isAdmin = userRole === "admin";
+  const currentUserId = Cookies.get("userId");
+  const ownerId = laundry?.ownerId?._id || laundry?.ownerId;
+  const isLaundryOwner = ownerId === currentUserId;
 
   function handleUpdated(updated) {
     setLaundry((prev) => ({ ...prev, ...updated }));
@@ -311,6 +349,93 @@ export default function LaundryDetails() {
     } catch (err) {
       setDeleteError(err.message);
       setDeleting(false);
+    }
+  }
+
+  async function handleSubmitReview(e) {
+    e.preventDefault();
+    if (submittingReview) return;
+    if (!newComment.trim()) {
+      toast.error("Please add a comment for your review.");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      await createLaundryReview({
+        laundryId: id,
+        rating: newRating,
+        comment: newComment,
+      });
+      toast.success("Review submitted successfully!");
+      setNewComment("");
+      setNewRating(5);
+      
+      // Reload reviews and laundry rating
+      const reviewsData = await getLaundryReviews(id);
+      setReviews(reviewsData);
+      const laundryData = await getLaundryById(id);
+      setLaundry(laundryData);
+    } catch (err) {
+      toast.error(err.message || "Failed to submit review.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
+  async function handleDeleteReview(reviewId) {
+    const result = await Swal.fire({
+      title: "Delete Review?",
+      text: "You are about to permanently remove your review. This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Delete It",
+      cancelButtonText: "Cancel",
+      background: "#fff",
+      customClass: {
+        popup: 'swal2-rounded-popup'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteLaundryReview(reviewId);
+        toast.success("Review deleted successfully!");
+        // Reload reviews and laundry rating
+        const reviewsData = await getLaundryReviews(id);
+        setReviews(reviewsData);
+        const laundryData = await getLaundryById(id);
+        setLaundry(laundryData);
+      } catch (err) {
+        toast.error(err.message || "Failed to delete review.");
+      }
+    }
+  }
+
+  async function handleUpdateReview(reviewId) {
+    if (!editingComment.trim()) {
+      toast.error("Review comment cannot be empty.");
+      return;
+    }
+    setUpdatingReview(true);
+    try {
+      await updateLaundryReview(reviewId, {
+        rating: editingRating,
+        comment: editingComment,
+      });
+      toast.success("Review updated successfully!");
+      setEditingReviewId(null);
+      
+      // Reload reviews and laundry rating
+      const reviewsData = await getLaundryReviews(id);
+      setReviews(reviewsData);
+      const laundryData = await getLaundryById(id);
+      setLaundry(laundryData);
+    } catch (err) {
+      toast.error(err.message || "Failed to update review.");
+    } finally {
+      setUpdatingReview(false);
     }
   }
 
@@ -356,15 +481,17 @@ export default function LaundryDetails() {
           <button className="det-back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={16} /> Back to My Laundries
           </button>
-          <div className="det-topbar-actions">
-            <button className="det-edit-btn" onClick={() => setShowEdit(true)}>
-              <Pencil size={16} /> Edit Laundry
-            </button>
-            <button className="det-delete-btn"
-              onClick={() => { setDeleteError(""); setShowDelete(true); }}>
-              <Trash2 size={16} /> Delete
-            </button>
-          </div>
+          {isLaundryOwner && (
+            <div className="det-topbar-actions">
+              <button className="det-edit-btn" onClick={() => setShowEdit(true)}>
+                <Pencil size={16} /> Edit Laundry
+              </button>
+              <button className="det-delete-btn"
+                onClick={() => { setDeleteError(""); setShowDelete(true); }}>
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Hero Card */}
@@ -471,6 +598,196 @@ export default function LaundryDetails() {
             </div>
           </div>
 
+        </div>
+
+        {/* Reviews Section */}
+        <div className="det-reviews-section">
+          <h2 className="det-reviews-title">💬 Customer Reviews</h2>
+          
+          <div className="det-reviews-container">
+            {/* Left Column: List of Reviews */}
+            <div className="det-reviews-list-wrap">
+              {reviewsLoading ? (
+                <div className="det-reviews-loading">
+                  <Loader2 className="det-spin animate-spin" size={24} />
+                  <span>Loading reviews...</span>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="det-reviews-empty">
+                  <span>No reviews yet. Be the first to leave one!</span>
+                </div>
+              ) : (
+                <div className="det-reviews-list">
+                  {reviews.map((rev) => {
+                    const client = rev.clientId || {};
+                    const avatarUrl = client.profileImage
+                      ? (client.profileImage.startsWith("http") ? client.profileImage : `${Domain}/uploads/users/${client.profileImage}`)
+                      : "https://www.w3schools.com/howto/img_avatar.png";
+                    
+                    const currentUserId = Cookies.get("userId");
+                    // client can be object populated or simple string ID
+                    const clientObjectId = client._id || client;
+                    const isOwner = clientObjectId === currentUserId;
+                    const canEditDelete = isOwner || isAdmin;
+                    
+                    const isEditingThis = editingReviewId === rev._id;
+
+                    return (
+                      <div key={rev._id} className="det-review-card">
+                        {isEditingThis ? (
+                          /* Inline Edit Mode */
+                          <div className="det-review-edit-form">
+                            <div className="det-rating-picker-group">
+                              <label className="form-label">Edit Rating</label>
+                              <div className="det-rating-picker-stars">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <button
+                                    type="button"
+                                    key={s}
+                                    onClick={() => setEditingRating(s)}
+                                    className="det-rating-picker-star-btn"
+                                  >
+                                    <Star
+                                      size={18}
+                                      className={s <= editingRating ? "star-f fill-amber-400 text-amber-400" : "star-e text-gray-300"}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="form-group mt-2">
+                              <label className="form-label">Edit Comment</label>
+                              <textarea
+                                className="form-input form-textarea"
+                                value={editingComment}
+                                onChange={(e) => setEditingComment(e.target.value)}
+                                rows={3}
+                                required
+                              />
+                            </div>
+
+                            <div className="flex gap-2 justify-end mt-3">
+                              <button
+                                type="button"
+                                onClick={() => setEditingReviewId(null)}
+                                className="px-3 py-1.5 rounded-xl border border-gray-300 text-xs font-semibold hover:bg-gray-100 transition"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                disabled={updatingReview}
+                                onClick={() => handleUpdateReview(rev._id)}
+                                className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+                              >
+                                {updatingReview ? "Saving..." : "Save Changes"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Normal Display Mode */
+                          <>
+                            <div className="det-review-header">
+                              <img src={avatarUrl} alt={client.fullname} className="det-review-avatar" />
+                              <div className="det-review-meta">
+                                <span className="det-review-author">{client.fullname || "Anonymous"}</span>
+                                <span className="det-review-date">{formatDate(rev.createdAt)}</span>
+                              </div>
+                              <div className="flex flex-col items-end gap-1.5">
+                                <div className="det-review-stars">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      size={12}
+                                      className={s <= Math.round(rev.rating) ? "star-f" : "star-e"}
+                                    />
+                                  ))}
+                                </div>
+                                {canEditDelete && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditingReviewId(rev._id);
+                                        setEditingRating(rev.rating || 5);
+                                        setEditingComment(rev.comment || "");
+                                      }}
+                                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteReview(rev._id)}
+                                      className="text-[11px] font-bold text-red-650 hover:text-red-800"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {rev.comment && <p className="det-review-comment">{rev.comment}</p>}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Write a Review Form */}
+            <div className="det-review-form-wrap">
+              <h3 className="det-review-form-title">Write a Review</h3>
+              <form onSubmit={handleSubmitReview} className="det-review-form">
+                {/* Rating Picker */}
+                <div className="det-rating-picker-group">
+                  <label className="form-label">Your Rating</label>
+                  <div className="det-rating-picker-stars">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        type="button"
+                        key={s}
+                        onClick={() => setNewRating(s)}
+                        className="det-rating-picker-star-btn"
+                      >
+                        <Star
+                          size={24}
+                          className={s <= newRating ? "star-f fill-amber-400 text-amber-400" : "star-e text-gray-300"}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Comment Textarea */}
+                <div className="form-group">
+                  <label className="form-label">Your Comment</label>
+                  <textarea
+                    className="form-input form-textarea"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Share your experience with this center..."
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="btn-submit btn-edit w-full"
+                  style={{ marginTop: 8 }}
+                >
+                  {submittingReview ? (
+                    <><Loader2 size={16} className="det-spin animate-spin" /> Submitting...</>
+                  ) : (
+                    "Submit Review"
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
 

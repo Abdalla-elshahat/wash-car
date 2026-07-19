@@ -8,7 +8,7 @@ import Cookies from "js-cookie";
 import { Domain } from "../../utels/const";
 function Navbar() {
   const token = Cookies.get("token");
-  const userRole = localStorage.getItem("userRole");
+  const [userRole, setUserRole] = useState(localStorage.getItem("userRole") || "");
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +41,8 @@ function Navbar() {
           setUserName(data.fullname || "");
           setUserEmail(data.email || "");
           setUserPicture(data.profileImage || "");
+          setUserRole(data.role || "");
+          localStorage.setItem("userRole", data.role || "");
         }
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
@@ -123,24 +125,22 @@ function Navbar() {
                     <NavLink
                       to="/laundries/owner"
                       className={({ isActive }) =>
-                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-indigo-600 text-white shadow-md"
-                            : "text-indigo-600 hover:bg-indigo-50"
+                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${isActive
+                          ? "bg-indigo-600 text-white shadow-md"
+                          : "text-indigo-600 hover:bg-indigo-50"
                         }`
                       }
                     >
                       🏪 My Laundry
                     </NavLink>
                   )}
-                  {userRole === "admin" && (
+                  {userRole?.toLowerCase() === "admin" && (
                     <NavLink
                       to="/admin/laundries/inactive"
                       className={({ isActive }) =>
-                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
-                          isActive
-                            ? "bg-red-600 text-white shadow-md"
-                            : "text-red-600 hover:bg-red-50"
+                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${isActive
+                          ? "bg-red-600 text-white shadow-md"
+                          : "text-red-600 hover:bg-red-50"
                         }`
                       }
                     >
@@ -223,6 +223,17 @@ function Navbar() {
                 🏪 My Laundry
               </NavLink>
             )}
+
+            {userRole?.toLowerCase() === "admin" && (
+              <NavLink
+                to="/admin/laundries/inactive"
+                className={({ isActive }) =>
+                  `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-red-650 text-red-650 bg-red-50" : "border-l-transparent text-red-650 hover:bg-red-50"}`
+                }
+              >
+                🚫 Inactive Laundries
+              </NavLink>
+            )}
           </div>
 
           {/* Mobile action buttons */}
@@ -250,34 +261,6 @@ function Navbar() {
                     </div>
 
                     <div className="auth-buttons">
-                      {userRole === "laundry_owner" && (
-                        <NavLink
-                          to="/laundries/owner"
-                          className={({ isActive }) =>
-                            `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 block mb-1 ${
-                              isActive
-                                ? "bg-indigo-600 text-white"
-                                : "text-indigo-600 hover:bg-indigo-50"
-                            }`
-                          }
-                        >
-                          🏪 My Laundry
-                        </NavLink>
-                      )}
-                      {userRole === "admin" && (
-                        <NavLink
-                          to="/admin/laundries/inactive"
-                          className={({ isActive }) =>
-                            `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 block mb-1 ${
-                              isActive
-                                ? "bg-red-600 text-white"
-                                : "text-red-600 hover:bg-red-50"
-                            }`
-                          }
-                        >
-                          🚫 Inactive Laundries
-                        </NavLink>
-                      )}
                       <button onClick={() => setNotifications(!notifications)} className="p-1 rounded-full  text-gray-500 hover:text-gray-700 focus:outline-none relative">
                         <Bell className="h-6 w-6" />
                       </button>

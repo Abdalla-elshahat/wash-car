@@ -24,12 +24,12 @@ export async function createLaundry(formData) {
 
   // Build multipart/form-data (backend uses FileInterceptor + @Body spread)
   const fd = new FormData();
-  fd.append("name",        formData.name);
+  fd.append("name", formData.name);
   fd.append("description", formData.description ?? "");
-  fd.append("phone",       formData.phone);
-  fd.append("address",     formData.address);
+  fd.append("phone", formData.phone);
+  fd.append("address", formData.address);
   // Send nested objects as JSON strings so @Body can receive them
-  fd.append("location",     JSON.stringify(formData.location));
+  fd.append("location", JSON.stringify(formData.location));
   fd.append("workingHours", JSON.stringify(formData.workingHours));
   if (formData.logo instanceof File) {
     fd.append("logo", formData.logo);
@@ -72,11 +72,11 @@ export async function updateLaundry(id, formData) {
   const token = Cookies.get("token");
 
   const fd = new FormData();
-  fd.append("name",        formData.name);
+  fd.append("name", formData.name);
   fd.append("description", formData.description ?? "");
-  fd.append("phone",       formData.phone);
-  fd.append("address",     formData.address);
-  fd.append("location",     JSON.stringify(formData.location));
+  fd.append("phone", formData.phone);
+  fd.append("address", formData.address);
+  fd.append("location", JSON.stringify(formData.location));
   fd.append("workingHours", JSON.stringify(formData.workingHours));
   if (formData.logo instanceof File) {
     fd.append("logo", formData.logo);
@@ -150,7 +150,7 @@ export async function getInactiveLaundries() {
 
 export async function updateLaundryStatus(id, status) {
   const token = Cookies.get("token");
-  
+
   const response = await fetch(`${Domain}/laundries/status/${id}`, {
     method: "PATCH",
     headers: {
@@ -168,5 +168,75 @@ export async function updateLaundryStatus(id, status) {
   return res.data ?? res;
 }
 
+export async function getLaundryReviews(laundryId) {
+  const token = Cookies.get("token");
+  const response = await fetch(`${Domain}/reviews?laundryId=${laundryId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
+  if (!response.ok) {
+    throw new Error("Failed to fetch laundry reviews");
+  }
 
+  return await response.json();
+}
+
+export async function createLaundryReview(reviewData) {
+  const token = Cookies.get("token");
+  const response = await fetch(`${Domain}/reviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(reviewData),
+  });
+
+  const res = await response.json();
+  if (!response.ok) {
+    throw new Error(res.message || "Failed to submit review");
+  }
+
+  return res;
+}
+
+export async function updateLaundryReview(id, reviewData) {
+  const token = Cookies.get("token");
+  const response = await fetch(`${Domain}/reviews/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(reviewData),
+  });
+
+  const res = await response.json();
+  if (!response.ok) {
+    throw new Error(res.message || "Failed to update review");
+  }
+
+  return res;
+}
+
+export async function deleteLaundryReview(id) {
+  const token = Cookies.get("token");
+  const response = await fetch(`${Domain}/reviews/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const res = await response.json().catch(() => ({}));
+    throw new Error(res.message || "Failed to delete review");
+  }
+
+  return true;
+}

@@ -98,22 +98,23 @@ export async function verifyForget(e, email, otpCode, setError, setLoading, navi
   e.preventDefault();
   setError("");
   setLoading(true);
+  const otpString = otpCode.join(""); // Convert array to string
   try {
     const response = await fetch(
-      `${Domain}/users/VerifyOtpForResetPassword`,
+      `${Domain}/users/verifyOtpForResetPassword`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otpCode }),
+        body: JSON.stringify({ email, otp: otpString }),
       }
     );
-
     setLoading(false);
 
     if (response.ok) {
       toast.success("Email successfully verified", {
         icon: <FaCheckCircle color="green" />,
       });
+      sessionStorage.setItem("resetOtp", otpString);
       setTimeout(() => {
         navigate("/changepass");
       }, 1000);
@@ -347,6 +348,10 @@ export async function changePassword(e, oldpassword, confirmpassword, newpasswor
 export async function resetpassword(e, otp, newPassword, setError, setLoading, navigate) {
   e.preventDefault();
   setError("");
+  if (!validatePassword(newPassword)) {
+    setError("Password must be at least 8 characters long and contain at least 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special character.");
+    return;
+  }
   setLoading(true);
   try {
     const response = await fetch(`${Domain}/users/reset-password`,
@@ -384,6 +389,8 @@ export async function Logout(e, setError, setLoading, navigate) {
 
   try {
     Cookies.remove("token"); // احذف التوكن
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userId");
     setLoading(false);
 
     toast.success("Logged out successfully", {

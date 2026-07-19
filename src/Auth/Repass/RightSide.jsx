@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { CiLock } from "react-icons/ci";
 import { useNavigate } from "react-router-dom";
-import { MdAlternateEmail } from "react-icons/md";
 import { ToastContainer } from "react-toastify";
 import { IoMdEyeOff } from "react-icons/io";
 
 import { IoEye } from "react-icons/io5";
-import { changePassword } from "../../apicalls/auth";
+import { resetpassword } from "../../apicalls/auth";
+
 export default function RightSide() {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmpassword, setConfirmPassword] = useState("");
   const [show, setShow] = useState(true);
@@ -16,6 +15,18 @@ export default function RightSide() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+    if (password !== confirmpassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+    const otp = sessionStorage.getItem("resetOtp") || "";
+    resetpassword(e, otp, password, setError, setLoading, navigate);
+  };
+
   return (
     <div className="w-full md:w-3/5 px-4 md:px-0 mt-8">
            <ToastContainer />
@@ -25,22 +36,7 @@ export default function RightSide() {
           <span className="sm:block text-center">previously used password</span>
         </p>
 
-        <form className="space-y-6 mt-5" onSubmit={(e)=>changePassword(e,confirmpassword, password, email, setError, setLoading, navigate)}>
-          <div className="relative">
-            <label htmlFor="Email" className="block text-md font-bold text-[#939393] mb-2">
-              Email
-            </label>
-            <MdAlternateEmail className="text-[17px] absolute left-3 top-[45px] text-gray-800" />
-            <input
-              type="email"
-              id="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full pl-10 px-3 py-2 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter Your Email"
-              required
-            />
-          </div>
+        <form className="space-y-6 mt-5" onSubmit={handleSubmit}>
 
           <div className="relative">
             <label htmlFor="password" className="block text-md font-bold text-[#939393] mb-2">

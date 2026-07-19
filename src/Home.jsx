@@ -3,17 +3,17 @@ import { Link } from 'react-router-dom';
 import Navbar from './component/Navbar/Navbar';
 import { getAllLaundries } from './apicalls/laundry';
 import { Domain } from './utels/const';
-import { 
-  MapPin, 
-  Phone, 
-  Clock, 
-  Star, 
-  Store, 
-  ChevronLeft, 
-  ChevronRight, 
-  Users, 
-  FileText, 
-  Settings, 
+import {
+  MapPin,
+  Phone,
+  Clock,
+  Star,
+  Store,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  FileText,
+  Settings,
   User,
   ExternalLink
 } from 'lucide-react';
@@ -31,7 +31,7 @@ function Home() {
       try {
         setLoading(true);
         const res = await getAllLaundries(page, 9); // limit to 9 for a nice 3x3 grid
-        
+
         // Match response structure
         const laundryList = res.data || [];
         setLaundries(laundryList);
@@ -75,7 +75,7 @@ function Home() {
               </p>
             </div>
             {/* Quick Actions at the top */}
-            <div className="flex flex-wrap gap-4 justify-center md:justify-end">
+            {/* <div className="flex flex-wrap gap-4 justify-center md:justify-end">
               <Link to="/clients" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
                 <Users size={18} />
                 <span>العملاء</span>
@@ -88,7 +88,7 @@ function Home() {
                 <Settings size={18} />
                 <span>خدمات</span>
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -128,9 +128,9 @@ function Home() {
                 {laundries.map((laundry) => {
                   const logoUrl = getLogoUrl(laundry.logo);
                   const owner = laundry.ownerId || {};
-                  
+
                   return (
-                    <div 
+                    <div
                       key={laundry._id}
                       className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group hover:-translate-y-1"
                     >
@@ -151,10 +151,10 @@ function Home() {
                             <div className="flex items-center gap-1.5 mt-1">
                               <div className="flex text-amber-400">
                                 {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star 
-                                    key={star} 
-                                    size={12} 
-                                    className={star <= Math.round(laundry.rating || 0) ? "fill-amber-400" : "text-gray-200"} 
+                                  <Star
+                                    key={star}
+                                    size={12}
+                                    className={star <= Math.round(laundry.rating || 0) ? "fill-amber-400" : "text-gray-200"}
                                   />
                                 ))}
                               </div>
@@ -164,11 +164,10 @@ function Home() {
                         </div>
 
                         {/* Status tag */}
-                        <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${
-                          laundry.status === 'approved' 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-150' 
+                        <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${laundry.status === 'approved'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-150'
                             : 'bg-amber-50 text-amber-700 border border-amber-150'
-                        }`}>
+                          }`}>
                           {laundry.status || 'pending'}
                         </span>
                       </div>
@@ -201,9 +200,9 @@ function Home() {
                       {/* Card Footer: Owner Info & Action */}
                       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4 mt-6">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <img 
-                            src={getOwnerAvatar(owner)} 
-                            alt={owner.fullname || 'Owner'} 
+                          <img
+                            src={getOwnerAvatar(owner)}
+                            alt={owner.fullname || 'Owner'}
                             className="h-8 w-8 rounded-full border border-gray-200 object-cover flex-shrink-0"
                           />
                           <div className="min-w-0">
@@ -212,7 +211,7 @@ function Home() {
                           </div>
                         </div>
 
-                        <Link 
+                        <Link
                           to={`/laundries/${laundry._id}`}
                           className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition duration-150"
                         >
