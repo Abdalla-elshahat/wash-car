@@ -228,6 +228,7 @@ export async function Login(e, password, email, setError, setLoading, Setemail, 
       Cookies.set("token", data.token);
       Cookies.set("refreshToken", data.refreshToken);
       Cookies.set("userId", data.user.id);
+      localStorage.setItem("userRole", data.user.role);
       toast.success("Logged in successfully", { icon: <FaCheckCircle color="green" /> });
       setTimeout(() => {
         navigate("/");

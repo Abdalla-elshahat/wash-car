@@ -7,7 +7,8 @@ import { Logout } from "../../apicalls/auth";
 import Cookies from "js-cookie";
 import { Domain } from "../../utels/const";
 function Navbar() {
-  const token = Cookies.get("token")
+  const token = Cookies.get("token");
+  const userRole = localStorage.getItem("userRole");
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [error, setError] = useState("");
@@ -118,6 +119,34 @@ function Navbar() {
             <div className="hidden md:flex items-center space-x-4">
               {token ? (
                 <>
+                  {userRole === "laundry_owner" && (
+                    <NavLink
+                      to="/laundries/owner"
+                      className={({ isActive }) =>
+                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? "bg-indigo-600 text-white shadow-md"
+                            : "text-indigo-600 hover:bg-indigo-50"
+                        }`
+                      }
+                    >
+                      🏪 My Laundry
+                    </NavLink>
+                  )}
+                  {userRole === "admin" && (
+                    <NavLink
+                      to="/admin/laundries/inactive"
+                      className={({ isActive }) =>
+                        `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? "bg-red-600 text-white shadow-md"
+                            : "text-red-600 hover:bg-red-50"
+                        }`
+                      }
+                    >
+                      🚫 Inactive Laundries
+                    </NavLink>
+                  )}
                   <div className="relative"> {/* جعل العنصر الأب نسبيًا */}
                     <button onClick={() => setNotifications(!notifications)} className="p-1 rounded-full  text-gray-500 hover:text-gray-700 focus:outline-none relative">
                       <Bell className="h-6 w-6" />
@@ -178,73 +207,22 @@ function Navbar() {
             <NavLink
               to="/"
               className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
+                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8] text-[#3362C8]" : "border-l-transparent"}`
               }
             >
               Home
             </NavLink>
 
-            <NavLink
-              to="/Podcasts"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              Podcasts
-            </NavLink>
-
-            <NavLink
-              to="/Saved"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              Saved
-            </NavLink>
-            <NavLink
-              to="/About"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              About
-            </NavLink>
-
-            <NavLink
-              to="/Contact"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              Contact
-            </NavLink>
-
-            <NavLink
-              to="/AddFriends"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              Add Friends
-            </NavLink>
-
-            <NavLink
-              to="/Roadmaps"
-              className={({ isActive }) =>
-                `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-[#3362C8]" : ``
-                }`
-              }
-            >
-              Roadmaps
-            </NavLink>
-
-
+            {userRole === "laundry_owner" && (
+              <NavLink
+                to="/laundries/owner"
+                className={({ isActive }) =>
+                  `border-l-4 block pl-3 pr-4 py-2 text-base font-medium ${isActive ? "border-l-indigo-600 text-indigo-600 bg-indigo-50" : "border-l-transparent text-indigo-600 hover:bg-indigo-50"}`
+                }
+              >
+                🏪 My Laundry
+              </NavLink>
+            )}
           </div>
 
           {/* Mobile action buttons */}
@@ -271,9 +249,35 @@ function Navbar() {
                       </div>
                     </div>
 
-
-
                     <div className="auth-buttons">
+                      {userRole === "laundry_owner" && (
+                        <NavLink
+                          to="/laundries/owner"
+                          className={({ isActive }) =>
+                            `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 block mb-1 ${
+                              isActive
+                                ? "bg-indigo-600 text-white"
+                                : "text-indigo-600 hover:bg-indigo-50"
+                            }`
+                          }
+                        >
+                          🏪 My Laundry
+                        </NavLink>
+                      )}
+                      {userRole === "admin" && (
+                        <NavLink
+                          to="/admin/laundries/inactive"
+                          className={({ isActive }) =>
+                            `text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 block mb-1 ${
+                              isActive
+                                ? "bg-red-600 text-white"
+                                : "text-red-600 hover:bg-red-50"
+                            }`
+                          }
+                        >
+                          🚫 Inactive Laundries
+                        </NavLink>
+                      )}
                       <button onClick={() => setNotifications(!notifications)} className="p-1 rounded-full  text-gray-500 hover:text-gray-700 focus:outline-none relative">
                         <Bell className="h-6 w-6" />
                       </button>

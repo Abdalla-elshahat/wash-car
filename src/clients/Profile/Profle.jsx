@@ -6,6 +6,8 @@ import {
   Upload, AlertCircle, ShoppingBag, Edit, Award
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
+import Swal from "sweetalert2";
+import { deleteAccount } from "../../apicalls/users";
 
 function Profile() {
   const [userData, setUserData] = useState(null);
@@ -100,6 +102,43 @@ function Profile() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Once deleted, you cannot recover or re-register this email except through an Admin. Please contact support at: 01115337822.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#EF4444",
+      cancelButtonColor: "#3B82F6",
+      confirmButtonText: "Yes, delete my account!",
+      cancelButtonText: "Cancel",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await deleteAccount();
+          Swal.fire({
+            title: "Deleted!",
+            text: "Your account has been deleted successfully.",
+            icon: "success",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          
+          // Clear cookies and logout
+          Cookies.remove("token");
+          Cookies.remove("refreshToken");
+          Cookies.remove("userId");
+          
+          setTimeout(() => {
+            window.location.href = "/signup";
+          }, 2000);
+        } catch (err) {
+          Swal.fire("Error!", err.message || "Failed to delete account.", "error");
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh]">
@@ -167,11 +206,11 @@ function Profile() {
                 />
               </div>
               <div className="mb-2">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-md">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
                   {userData.fullname}
                 </h1>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm border border-white/10 uppercase tracking-wider">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                     {userData.role}
                   </span>
                   {userData.isVerified ? (
@@ -305,7 +344,8 @@ function Profile() {
 
             {/* Edit Profile Tab Content */}
             {activeTab === "edit" && (
-              <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-xl">
+              <>
+                <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-xl">
                 <h3 className="text-lg font-bold text-gray-900">Update Profile Details</h3>
 
                 <div className="space-y-4">
@@ -377,7 +417,23 @@ function Profile() {
                   </button>
                 </div>
               </form>
-            )}
+
+              {/* Danger Zone: Delete Account */}
+              <div className="mt-12 pt-8 border-t border-red-100 max-w-xl">
+                <h4 className="text-md font-bold text-red-600 mb-2">Danger Zone</h4>
+                <p className="text-xs text-gray-500 mb-4">
+                  Once you delete your account, this email address cannot be re-registered or accessed without admin assistance. For support, please contact: 01115337822.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold border border-red-200 transition-all duration-200"
+                >
+                  Delete Account
+                </button>
+              </div>
+            </>
+          )}
 
             {/* Orders Tab Content */}
             {activeTab === "orders" && (

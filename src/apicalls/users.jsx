@@ -22,3 +22,15 @@ export async function updateProfile(formData) {
   }
   return response.json();
 }
+
+// Delete user account
+export async function deleteAccount() {
+  const response = await fetch(`${Domain}/users`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to delete account");
+  }
+  return response.json();
+}

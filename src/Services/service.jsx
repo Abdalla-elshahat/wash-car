@@ -18,7 +18,6 @@ function Services() {
       },
     });
     const data = await res.json();
-    console.log(data);
     setservices(data);
   }
   async function deleterecord(id) {

@@ -14,10 +14,8 @@ export default function SocialLogin() {
 
     // دالة الكولباك عند تسجيل الدخول
     window.logincallback = (response) => {
-      console.log("Raw Google Response:", response);
       const idToken = response.credential;
       const userData = jwtDecode(idToken);
-      console.log("Decoded JWT:", userData);
       // ممكن تستخدم userData.email، name، picture إلخ
     };
 
@@ -44,7 +42,7 @@ export default function SocialLogin() {
         window.google.accounts.id.prompt();
       }
     };
-    
+
     // تنظيف عند إلغاء تحميل الكمبوننت
     return () => {
       document.body.removeChild(script);
@@ -67,12 +65,12 @@ export default function SocialLogin() {
         <div id="google-signin-btn"></div>
 
         {/* زر GitHub لتوسيع المنصة مستقبلاً */}
-      {/*
+        {/*
 <button className="w-10 h-10">
 <img src={githubPhot} alt="GitHub Login" className="w-full h-full" />
 </button>
        */
-      } 
+        }
       </div>
     </div>
   );
