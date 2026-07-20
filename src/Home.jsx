@@ -75,20 +75,28 @@ function Home() {
               </p>
             </div>
             {/* Quick Actions at the top */}
-            {/* <div className="flex flex-wrap gap-4 justify-center md:justify-end">
-              <Link to="/clients" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
-                <Users size={18} />
-                <span>العملاء</span>
-              </Link>
-              <Link to="/orders" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
-                <FileText size={18} />
-                <span>الطلبات</span>
-              </Link>
-              <Link to="/services" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
-                <Settings size={18} />
-                <span>خدمات</span>
-              </Link>
-            </div> */}
+            {localStorage.getItem("userRole") === "Admin" ? (
+              <div className="flex flex-wrap gap-4 justify-center md:justify-end" >
+                <Link to="/clients" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
+                  <Users size={18} />
+                  <span>العملاء</span>
+                </Link>
+              </div>
+            ) : localStorage.getItem("userRole") === "laundry_owner" ? (
+              <div className="flex flex-wrap gap-4 justify-center md:justify-end" >
+                <Link to="/orders" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
+                  <FileText size={18} />
+                  <span>الطلبات</span>
+                </Link>
+                <Link to="/services" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
+                  <Settings size={18} />
+                  <span>خدمات</span>
+                </Link>
+              </div>
+            ) : (
+              null
+            )}
+
           </div>
         </div>
 
@@ -165,8 +173,8 @@ function Home() {
 
                         {/* Status tag */}
                         <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${laundry.status === 'approved'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-150'
-                            : 'bg-amber-50 text-amber-700 border border-amber-150'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-150'
+                          : 'bg-amber-50 text-amber-700 border border-amber-150'
                           }`}>
                           {laundry.status || 'pending'}
                         </span>
