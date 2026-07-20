@@ -31,7 +31,7 @@ function RightSide() {
         <form
           className="space-y-7 mt-12"
           onSubmit={(e) =>
-            verify(e, email, setError, setLoading, otpCode, navigate)
+            verify(e, email, setError, setLoading, otpCode, navigate, setOtpCode)
           }
         >
           <div className="flex justify-between w-3/4 mx-auto">
@@ -47,7 +47,7 @@ function RightSide() {
               />
             ))}
           </div>
-          <button onClick={(e) => resendOTPS(e, email, setError, setLoading)}>
+          <button type="button" onClick={(e) => resendOTPS(e, email, setError, setLoading, setOtpCode)}>
             Resend OTP?
           </button>
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}

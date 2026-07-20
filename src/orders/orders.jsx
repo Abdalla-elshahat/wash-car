@@ -4,7 +4,7 @@ import { getOrdersByLaundryId, updateOrderStatus } from "../apicalls/order";
 import { getOwnerLaundries } from "../apicalls/laundry";
 import { 
   ShoppingBag, Filter, RefreshCw, ChevronLeft, ChevronRight, 
-  CheckCircle, Clock, XCircle, AlertTriangle, CreditCard, Tag, User, Phone, FileText
+  CheckCircle, Clock, XCircle, AlertTriangle, CreditCard, Tag, User, Phone, FileText, MapPin
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -269,10 +269,15 @@ export default function Orders() {
                       <User className="w-4 h-4 text-slate-400 mt-0.5" />
                       <div>
                         <span className="text-xs font-semibold text-slate-400 uppercase">Client</span>
-                        <p className="font-semibold text-slate-800">{order.clientId?.fullname || "Guest Client"}</p>
-                        {order.clientId?.phone && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {order.clientId.phone}
+                        <p className="font-semibold text-slate-800">{order.customerName || order.clientId?.fullname || "Guest Client"}</p>
+                        {(order.phone || order.clientId?.phone) && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-slate-400" /> {order.phone || order.clientId?.phone}
+                          </p>
+                        )}
+                        {order.address && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-slate-400" /> {order.address}
                           </p>
                         )}
                       </div>

@@ -97,3 +97,50 @@ export async function validateCoupon(code, laundryId) {
 
   return res;
 }
+
+/**
+ * Get client's orders (/orders/client)
+ */
+export async function getClientOrders({ page = 1, limit = 10 } = {}) {
+  const token = Cookies.get("token");
+  const queryParams = new URLSearchParams();
+  if (page) queryParams.append("page", page.toString());
+  if (limit) queryParams.append("limit", limit.toString());
+
+  const response = await fetch(`${Domain}/orders/client?${queryParams.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const res = await response.json();
+  if (!response.ok) {
+    throw new Error(res.message || "Failed to fetch client orders");
+  }
+
+  return res;
+}
+
+/**
+ * Cancel client order
+ */
+export async function cancelClientOrder(orderId) {
+  const token = Cookies.get("token");
+
+  const response = await fetch(`${Domain}/orders/${orderId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const res = await response.json();
+  if (!response.ok) {
+    throw new Error(res.message || "Failed to cancel order");
+  }
+
+  return res;
+}

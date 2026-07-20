@@ -28,7 +28,7 @@ function RightSide() {
         <p className="text-gray-500 text-[21px]">
           Enter the OTP sent to your Email
         </p>
-        <form className="space-y-7 mt-12" onSubmit={(e)=>verifyForget(e, email,otpCode,setError, setLoading, navigate)}>
+        <form className="space-y-7 mt-12" onSubmit={(e)=>verifyForget(e, email,otpCode,setError, setLoading, navigate, setOtpCode)}>
           <div className="flex justify-between w-3/4 mx-auto">
             {otpCode.map((num, index) => (
               <input
@@ -42,7 +42,7 @@ function RightSide() {
               />
             ))}
           </div>
-          <button  onClick={(e)=>ResendOTPF(e, email, setError, setLoading)}>Resend OTP?</button>
+          <button type="button" onClick={(e)=>ResendOTPF(e, email, setError, setLoading, setOtpCode)}>Resend OTP?</button>
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
           <button
             type="submit"

@@ -60,9 +60,7 @@ function Home() {
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-gray-50 pb-16">
+    <div className="min-h-screen bg-gray-50 pb-16">
         {/* Hero Section */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 text-white py-12 px-6 shadow-md">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
@@ -258,7 +256,6 @@ function Home() {
           )}
         </div>
       </div>
-    </>
   );
 }
 

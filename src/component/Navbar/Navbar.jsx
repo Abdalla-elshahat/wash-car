@@ -1,6 +1,6 @@
 import "../Navbar/Navbar.css";
-import { useEffect, useState } from "react";
-import { Search, Bell, Menu, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Search, Bell, Menu, X, LogOut } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Logout } from "../../apicalls/auth";
@@ -22,6 +22,21 @@ function Navbar() {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
 
 
@@ -153,23 +168,44 @@ function Navbar() {
                     </button>
                     {/* {notifications && <Notification />} */}
                   </div>
-                  <div className="flex items-center">
-                    <Link to={"/profile"}>
+                  <div className="relative flex items-center" ref={dropdownRef}>
+                    <button
+                      onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-indigo-50/50 transition duration-200 focus:outline-none"
+                    >
+
                       <img
-                        className="h-10 w-10 rounded-full ml-2 object-cover border-2 border-indigo-500 hover:border-indigo-600 hover:scale-105 transition-all duration-200"
+                        className="h-9 w-9 rounded-full object-cover border-2 border-indigo-500 hover:border-indigo-600 transition-all duration-200"
                         src={getProfileImageUrl(userPicture)}
                         alt="User profile"
                       />
-                    </Link>
-                  </div>
-                  <div className="auth-buttons">
-                    <button
-                      className="login-btn py-[4px] px-[18px]"
-                      onClick={(e) => Logout(e, setError, setLoading, navigate)}
-                    >
-                      Logout
+                      <span className="text-sm font-semibold text-gray-700 select-none">
+                        {userName || "My Account"}
+                      </span>
                     </button>
 
+                    {isProfileDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-150 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <Link
+                          to="/profile"
+                          onClick={() => setIsProfileDropdownOpen(false)}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50/55 transition font-semibold"
+                        >
+                          👤 Profile
+                        </Link>
+                        <hr className="my-1 border-gray-100" />
+                        <button
+                          onClick={(e) => {
+                            setIsProfileDropdownOpen(false);
+                            Logout(e, setError, setLoading, navigate);
+                          }}
+                          style={{ display: 'flex', alignItems: 'center' }}
+                          className="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition font-semibold"
+                        >
+                          <LogOut /> <span className="pl-2">Logout</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -238,54 +274,68 @@ function Navbar() {
 
           {/* Mobile action buttons */}
 
-          <div className="pt-4 pb-3 border-t border-gray-200">
-
-            <div className="flex items-center px-4">
-
-
-              <div className="flex items-center justify-between w-full space-x-4 bg--500">
-                {token ? (
-                  <>
-                    <div className="flex items-center space-x-3">
-                      <Link to={"/profile"}>
-                        <img
-                          className="h-10 w-10 rounded-full ml-2 object-cover border-2 border-indigo-500"
-                          src={getProfileImageUrl(userPicture)}
-                          alt="User profile"
-                        />
-                      </Link>
-                      <div className="ml-3">
-                        <div className="text-base font-medium text-gray-800">{userName}</div>
-                        <div className="text-sm font-medium text-gray-500">{userEmail}</div>
-                      </div>
-                    </div>
-
-                    <div className="auth-buttons">
-                      <button onClick={() => setNotifications(!notifications)} className="p-1 rounded-full  text-gray-500 hover:text-gray-700 focus:outline-none relative">
-                        <Bell className="h-6 w-6" />
-                      </button>
-                      {/* {notifications && <Notification />} */}
-
-                      <button className="login-btn py-[4px] px-[18px]" onClick={(e) => Logout(e, setError, setLoading, navigate)}>
-                        Logout
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex ml-auto">
-                    <div className="auth-buttons">
-                      <Link to="/login">
-                        <button className="login-btn py-[4px] px-[14px] md:px-[18px] font-bold text-sm">Log in</button>
-                      </Link>
-
-                      <Link to="/signup">
-                        <button className="signup-btn py-[4px] px-[14px] md:px-[18px] font-bold text-sm">Sign Up</button>
-                      </Link>
-                    </div>
+          <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700">
+            {token ? (
+              <div className="px-4 space-y-4">
+                {/* User Info Card */}
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition duration-200"
+                >
+                  <img
+                    className="h-12 w-12 rounded-full object-cover border-2 border-indigo-500"
+                    src={getProfileImageUrl(userPicture)}
+                    alt="User profile"
+                  />
+                  <div className="overflow-hidden">
+                    <div className="text-base font-bold text-gray-800 truncate">{userName}</div>
+                    <div className="text-xs text-gray-500 truncate">{userEmail}</div>
                   </div>
-                )}
+                </Link>
+
+                {/* Mobile Menu Links for logged in users */}
+                <div className="space-y-1">
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-indigo-50/50 transition"
+                  >
+                    <span>👤</span> Profile
+                  </Link>
+
+                  <button
+                    onClick={() => setNotifications(!notifications)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-indigo-50/55 transition text-left focus:outline-none"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Bell className="w-4 h-4 text-gray-500" /> Notifications
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      setIsMenuOpen(false);
+                      Logout(e, setError, setLoading, navigate);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition text-left focus:outline-none"
+                  >
+                    <LogOut className="w-4 h-4" /> Logout
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="px-4">
+                <div className="auth-buttons flex flex-col gap-2">
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)} className="w-full">
+                    <button className="login-btn w-full py-2.5 font-bold text-sm rounded-xl">Log in</button>
+                  </Link>
+                  <Link to="/signup" onClick={() => setIsMenuOpen(false)} className="w-full">
+                    <button className="signup-btn w-full py-2.5 font-bold text-sm rounded-xl">Sign Up</button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </nav>

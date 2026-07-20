@@ -27,7 +27,7 @@ export async function signup(e, name, password, email, setError, setLoading, Set
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username: name, email, password }),
+        body: JSON.stringify({ fullname: name, email, password }),
       }
     );
 
@@ -54,11 +54,11 @@ export async function signup(e, name, password, email, setError, setLoading, Set
 }
 
 //تاكيد عمل الايميل 
-export async function verify(e, email, setError, setLoading, otpCode, navigate) {
+export async function verify(e, email, setError, setLoading, otpCode, navigate, setOtpCode) {
   e.preventDefault();
   setError("");
   setLoading(true);
-  const otpString = otpCode.join(""); // تحويل المصفوفة إلى نص
+  const otpString = Array.isArray(otpCode) ? otpCode.join("") : otpCode; // تحويل المصفوفة إلى نص
 
   try {
     const response = await fetch(`${Domain}/users/verify-email`,
@@ -83,6 +83,10 @@ export async function verify(e, email, setError, setLoading, otpCode, navigate) 
       }, 1000);
     } else {
       const errorData = await response.json();
+      if (typeof setOtpCode === "function") {
+        setOtpCode(["", "", "", "", "", ""]);
+        setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+      }
       toast.error(
         `Error during verification: ${errorData.message || "Unknown error"}`,
         { icon: <FaExclamationCircle color="red" /> }
@@ -90,15 +94,19 @@ export async function verify(e, email, setError, setLoading, otpCode, navigate) 
     }
   } catch (error) {
     setLoading(false);
+    if (typeof setOtpCode === "function") {
+      setOtpCode(["", "", "", "", "", ""]);
+      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+    }
     setError("Error verifying. Please try again.");
   }
 }
 // دالة التحقق من OTP عند نسيان كلمة المرور
-export async function verifyForget(e, email, otpCode, setError, setLoading, navigate) {
+export async function verifyForget(e, email, otpCode, setError, setLoading, navigate, setOtpCode) {
   e.preventDefault();
   setError("");
   setLoading(true);
-  const otpString = otpCode.join(""); // Convert array to string
+  const otpString = Array.isArray(otpCode) ? otpCode.join("") : otpCode; // Convert array to string
   try {
     const response = await fetch(
       `${Domain}/users/verifyOtpForResetPassword`,
@@ -120,17 +128,25 @@ export async function verifyForget(e, email, otpCode, setError, setLoading, navi
       }, 1000);
     } else {
       const errorData = await response.json();
+      if (typeof setOtpCode === "function") {
+        setOtpCode(["", "", "", "", "", ""]);
+        setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+      }
       toast.error(`Error during verification: ${errorData.message || "Unknown error"}`, {
         icon: <FaExclamationCircle color="red" />,
       });
     }
   } catch (error) {
     setLoading(false);
+    if (typeof setOtpCode === "function") {
+      setOtpCode(["", "", "", "", "", ""]);
+      setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+    }
     setError("Error verifying. Please try again.");
   }
 }
 // عند تسجيل الدخول دالة إعادة إرسال OTP
-export async function resendOTPS(e, email, setError, setLoading) {
+export async function resendOTPS(e, email, setError, setLoading, setOtpCode) {
   e.preventDefault();
   setError("");
   setLoading(true);
@@ -148,6 +164,10 @@ export async function resendOTPS(e, email, setError, setLoading) {
     setLoading(false);
 
     if (response.ok) {
+      if (typeof setOtpCode === "function") {
+        setOtpCode(["", "", "", "", "", ""]);
+        setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+      }
       toast.success("OTP is resent successfully", {
         icon: <FaCheckCircle color="green" />,
       });
@@ -163,7 +183,7 @@ export async function resendOTPS(e, email, setError, setLoading) {
   }
 }
 // عند نسيان الباسورد الدخول دالة إعادة إرسال OTP
-export async function ResendOTPF(e, email, setError, setLoading) {
+export async function ResendOTPF(e, email, setError, setLoading, setOtpCode) {
   e.preventDefault();
   setError("");
   setLoading(true);
@@ -181,6 +201,10 @@ export async function ResendOTPF(e, email, setError, setLoading) {
     );
     setLoading(false);
     if (response.ok) {
+      if (typeof setOtpCode === "function") {
+        setOtpCode(["", "", "", "", "", ""]);
+        setTimeout(() => document.getElementById("otp-0")?.focus(), 100);
+      }
       toast.success("Otp is resend successfully", {
         icon: <FaCheckCircle color="green" />,
       });

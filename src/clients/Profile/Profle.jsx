@@ -1,13 +1,29 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Domain } from "../../utels/const";
 import Cookies from "js-cookie";
 import {
   User, Mail, Phone, ShieldCheck, ShieldAlert, Calendar,
-  Upload, AlertCircle, ShoppingBag, Edit, Award
+  Upload, AlertCircle, ShoppingBag, Edit, Award, Clock,
+  CheckCircle, XCircle, RefreshCw, CreditCard, Tag, FileText,
+  ChevronLeft, ChevronRight, Store, MapPin
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import { deleteAccount } from "../../apicalls/users";
+import { getClientOrders, cancelClientOrder } from "../../apicalls/order";
+
+function getLaundryLogoUrl(logo) {
+  if (!logo) return null;
+  if (logo.startsWith("http")) return logo;
+  return `${Domain}/uploads/laundries/${logo}`;
+}
+
+function getServiceImgUrl(img) {
+  if (!img) return null;
+  if (img.startsWith("http")) return img;
+  if (img.startsWith("uploads/")) return `${Domain}/${img}`;
+  return `${Domain}/uploads/services/${img}`;
+}
 
 function Profile() {
   const [userData, setUserData] = useState(null);
@@ -21,6 +37,14 @@ function Profile() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Client Orders State
+  const [clientOrders, setClientOrders] = useState([]);
+  const [clientOrdersLoading, setClientOrdersLoading] = useState(false);
+  const [clientOrdersError, setClientOrdersError] = useState("");
+  const [clientOrdersPage, setClientOrdersPage] = useState(1);
+  const [clientOrdersTotalPages, setClientOrdersTotalPages] = useState(1);
+  const [clientOrdersTotalItems, setClientOrdersTotalItems] = useState(0);
 
   const fileInputRef = useRef(null);
 
@@ -49,9 +73,31 @@ function Profile() {
     }
   };
 
+  const fetchClientOrders = useCallback(async (pageNum = 1) => {
+    setClientOrdersLoading(true);
+    setClientOrdersError("");
+    try {
+      const res = await getClientOrders({ page: pageNum, limit: 10 });
+      setClientOrders(res.data || []);
+      setClientOrdersPage(res.currentPage || 1);
+      setClientOrdersTotalPages(res.totalPages || 1);
+      setClientOrdersTotalItems(res.totalItems || 0);
+    } catch (err) {
+      setClientOrdersError(err.message || "Failed to load orders");
+    } finally {
+      setClientOrdersLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "orders") {
+      fetchClientOrders(clientOrdersPage);
+    }
+  }, [activeTab, clientOrdersPage, fetchClientOrders]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -77,7 +123,6 @@ function Profile() {
       const response = await fetch(`${Domain}/users`, {
         method: "PATCH",
         body: formData,
-        // Fetch interceptor will automatically append Bearer Token from cookies
       });
 
       if (response.ok) {
@@ -85,7 +130,7 @@ function Profile() {
           position: "top-right",
           autoClose: 3000,
         });
-        fetchProfile(); // reload profile with fresh data
+        fetchProfile();
         setActiveTab("overview");
       } else {
         const errData = await response.json();
@@ -99,6 +144,28 @@ function Profile() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    const result = await Swal.fire({
+      title: "Cancel Order?",
+      text: "Are you sure you want to cancel this order?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Cancel Order",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await cancelClientOrder(orderId);
+        toast.success("Order cancelled successfully");
+        fetchClientOrders(clientOrdersPage);
+      } catch (err) {
+        toast.error(err.message || "Failed to cancel order");
+      }
     }
   };
 
@@ -123,12 +190,11 @@ function Profile() {
             timer: 2000,
             showConfirmButton: false,
           });
-          
-          // Clear cookies and logout
+
           Cookies.remove("token");
           Cookies.remove("refreshToken");
           Cookies.remove("userId");
-          
+
           setTimeout(() => {
             window.location.href = "/signup";
           }, 2000);
@@ -137,6 +203,41 @@ function Profile() {
         }
       }
     });
+  };
+
+  const getStatusBadge = (st) => {
+    switch (st) {
+      case "completed":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+            <CheckCircle className="w-3.5 h-3.5" /> Completed
+          </span>
+        );
+      case "in_progress":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" /> In Progress
+          </span>
+        );
+      case "accepted":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+            <CheckCircle className="w-3.5 h-3.5" /> Accepted
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
+            <XCircle className="w-3.5 h-3.5" /> Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+            <Clock className="w-3.5 h-3.5" /> Pending
+          </span>
+        );
+    }
   };
 
   if (loading) {
@@ -179,7 +280,7 @@ function Profile() {
         {/* Main Card container */}
         <div className="bg-white/80 backdrop-blur-md border border-white/20 shadow-2xl rounded-3xl overflow-hidden transition-all duration-300">
 
-          {/* Cover/Header Gradient Banner */}
+          {/* Cover/Header Banner */}
           <div className="h-48 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-500 relative">
             <div className="absolute -bottom-16 left-8 sm:left-12 flex items-end space-x-6">
               <div className="relative group">
@@ -228,7 +329,7 @@ function Profile() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="pt-20 px-8 border-b border-gray-100 flex space-x-8">
+          <div className="pt-20 px-8 border-b border-gray-100 flex flex-wrap gap-4 sm:space-x-8">
             <button
               onClick={() => setActiveTab("overview")}
               className={`pb-4 text-sm font-semibold tracking-wide transition-all duration-200 border-b-2 ${activeTab === "overview"
@@ -254,7 +355,7 @@ function Profile() {
                 : "border-transparent text-gray-500 hover:text-gray-900"
                 }`}
             >
-              Orders ({userData.orders?.length || 0})
+              My Orders ({clientOrdersTotalItems || userData.orders?.length || 0})
             </button>
           </div>
 
@@ -263,7 +364,6 @@ function Profile() {
             {/* Overview Tab Content */}
             {activeTab === "overview" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
                 {/* User details list */}
                 <div className="md:col-span-2 space-y-6">
                   <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
@@ -313,19 +413,22 @@ function Profile() {
                   </div>
                 </div>
 
-                {/* Info Card / Stats */}
+                {/* Activity Overview */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-bold text-gray-900">Activity Overview</h3>
                   <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl text-white shadow-lg space-y-4">
                     <div className="flex justify-between items-start">
                       <Award className="w-8 h-8 opacity-80" />
-                      <span className="px-2.5 py-0.5 bg-white/20 rounded-full text-xs font-semibold border border-white/10 uppercase">
-                        {userData.role}
-                      </span>
+                      <button
+                        onClick={() => setActiveTab("orders")}
+                        className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs font-semibold border border-white/20 transition flex items-center gap-1.5"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" /> View My Orders
+                      </button>
                     </div>
                     <div>
                       <p className="text-2xl font-black">
-                        {userData.orders?.length || 0}
+                        {clientOrdersTotalItems || userData.orders?.length || 0}
                       </p>
                       <p className="text-xs text-indigo-100 font-medium mt-1 uppercase tracking-wide">
                         Total Wash Orders
@@ -346,127 +449,276 @@ function Profile() {
             {activeTab === "edit" && (
               <>
                 <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-xl">
-                <h3 className="text-lg font-bold text-gray-900">Update Profile Details</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Update Profile Details</h3>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={fullname}
-                      onChange={(e) => setFullname(e.target.value)}
-                      placeholder="Enter full name"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Enter phone number"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Profile Image
-                    </label>
-                    <div className="flex items-center space-x-4">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current.click()}
-                        className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm rounded-xl border border-indigo-200 transition-all duration-200"
-                      >
-                        Choose Image
-                      </button>
-                      <img
-                        src={selectedFile ? URL.createObjectURL(selectedFile) : userData.profileImage}
-                        alt="Preview"
-                        className="w-14 h-14 rounded-xl object-cover border border-gray-200 shadow-sm"
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={fullname}
+                        onChange={(e) => setFullname(e.target.value)}
+                        placeholder="Enter full name"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                       />
                     </div>
-                  </div>
-                </div>
 
-                <div className="pt-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Enter phone number"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Profile Image
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current.click()}
+                          className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm rounded-xl border border-indigo-200 transition-all duration-200"
+                        >
+                          Choose Image
+                        </button>
+                        <img
+                          src={selectedFile ? URL.createObjectURL(selectedFile) : imagePreview}
+                          alt="Preview"
+                          className="w-14 h-14 rounded-xl object-cover border border-gray-200 shadow-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="w-4 h-4" />
+                          <span>Save Changes</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Danger Zone: Delete Account */}
+                <div className="mt-12 pt-8 border-t border-red-100 max-w-xl">
+                  <h4 className="text-md font-bold text-red-600 mb-2">Danger Zone</h4>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Once you delete your account, this email address cannot be re-registered or accessed without admin assistance. For support, please contact: 01115337822.
+                  </p>
                   <button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold border border-red-200 transition-all duration-200"
                   >
-                    {saving ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="w-4 h-4" />
-                        <span>Save Changes</span>
-                      </>
-                    )}
+                    Delete Account
                   </button>
                 </div>
-              </form>
-
-              {/* Danger Zone: Delete Account */}
-              <div className="mt-12 pt-8 border-t border-red-100 max-w-xl">
-                <h4 className="text-md font-bold text-red-600 mb-2">Danger Zone</h4>
-                <p className="text-xs text-gray-500 mb-4">
-                  Once you delete your account, this email address cannot be re-registered or accessed without admin assistance. For support, please contact: 01115337822.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleDeleteAccount}
-                  className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold border border-red-200 transition-all duration-200"
-                >
-                  Delete Account
-                </button>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
             {/* Orders Tab Content */}
             {activeTab === "orders" && (
               <div className="space-y-6">
-                <h3 className="text-lg font-bold text-gray-900">Your Orders</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">My Orders</h3>
+                    <p className="text-xs text-gray-500">Track and view all your car wash orders</p>
+                  </div>
+                  <button
+                    onClick={() => fetchClientOrders(1)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${clientOrdersLoading ? "animate-spin" : ""}`} /> Refresh
+                  </button>
+                </div>
 
-                {userData.orders && userData.orders.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {userData.orders.map((order, idx) => (
+                {clientOrdersLoading ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
+                    <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-gray-500">Loading your orders...</p>
+                  </div>
+                ) : clientOrdersError ? (
+                  <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-red-600">{clientOrdersError}</p>
+                    <button
+                      onClick={() => fetchClientOrders(1)}
+                      className="mt-3 px-4 py-1.5 bg-red-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : clientOrders.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 border border-dashed border-gray-200 rounded-2xl">
+                    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="font-semibold text-gray-700">No orders placed yet</p>
+                    <p className="text-sm text-gray-400 mt-1">Book services to see your orders here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {clientOrders.map((order) => (
                       <div
-                        key={idx}
-                        className="p-5 border border-gray-100 rounded-2xl bg-gray-50 flex items-center justify-between hover:border-indigo-100 hover:bg-indigo-50/20 transition-all"
+                        key={order._id}
+                        className="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
                       >
-                        <div className="flex items-center space-x-4">
-                          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-                            <ShoppingBag className="w-6 h-6" />
+                        {/* Left Column: Laundry & Service Details */}
+                        <div className="space-y-3 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md">
+                              #{order._id?.slice(-8)}
+                            </span>
+                            {getStatusBadge(order.status)}
+                            <span className="text-xs text-gray-400">
+                              {new Date(order.createdAt).toLocaleString()}
+                            </span>
                           </div>
-                          <div>
-                            <p className="font-bold text-gray-900">Order #{idx + 1}</p>
-                            <p className="text-xs text-gray-500">ID: {order._id || order}</p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                            {/* Laundry Info */}
+                            <div className="flex items-start space-x-3">
+                              {order.laundryId?.logo ? (
+                                <img
+                                  src={getLaundryLogoUrl(order.laundryId.logo)}
+                                  alt={order.laundryId.name}
+                                  className="w-12 h-12 rounded-xl object-cover border border-gray-200 bg-gray-50 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                  <Store className="w-6 h-6" />
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Laundry</span>
+                                <p className="font-bold text-gray-900 text-sm">{order.laundryId?.name || "Wash Service"}</p>
+                                {order.laundryId?.address && (
+                                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <MapPin className="w-3 h-3 text-gray-400" /> {order.laundryId.address}
+                                  </p>
+                                )}
+                                {order.laundryId?.phone && (
+                                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <Phone className="w-3 h-3 text-gray-400" /> {order.laundryId.phone}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Service Info */}
+                            <div className="flex items-start space-x-3">
+                              {order.serviceId?.image ? (
+                                <img
+                                  src={getServiceImgUrl(order.serviceId.image)}
+                                  alt={order.serviceId.title}
+                                  className="w-12 h-12 rounded-xl object-cover border border-gray-200 bg-gray-50 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                                  <Tag className="w-6 h-6" />
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Service</span>
+                                <p className="font-bold text-gray-900 text-sm">{order.serviceId?.title || "Service Details"}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-sm font-extrabold text-indigo-600">
+                                    ${order.totalAmount ?? order.originalPrice ?? 0}
+                                  </span>
+                                  {order.discountAmount > 0 && (
+                                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                      -${order.discountAmount} Off
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Payment, Contact, Address & Notes */}
+                          <div className="flex flex-wrap items-center gap-3 text-xs pt-2 border-t border-gray-100">
+                            <span className="flex items-center gap-1 text-gray-600 font-medium capitalize">
+                              <CreditCard className="w-3.5 h-3.5 text-gray-400" /> {order.paymentMethod || "N/A"} ({order.paymentStatus || "pending"})
+                            </span>
+                            {order.customerName && (
+                              <span className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md">
+                                <User className="w-3.5 h-3.5 text-gray-400" /> {order.customerName}
+                              </span>
+                            )}
+                            {order.phone && (
+                              <span className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md">
+                                <Phone className="w-3.5 h-3.5 text-gray-400" /> {order.phone}
+                              </span>
+                            )}
+                            {order.address && (
+                              <span className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400" /> {order.address}
+                              </span>
+                            )}
+                            {order.notes && (
+                              <span className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg">
+                                <FileText className="w-3.5 h-3.5 text-gray-400" /> Note: {order.notes}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
-                          Active
-                        </span>
+
+                        {/* Right Column: Actions */}
+                        {(order.status === "pending" || order.status === "accepted") && (
+                          <div className="flex justify-end items-center shrink-0">
+                            <button
+                              onClick={() => handleCancelOrder(order._id)}
+                              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition"
+                            >
+                              Cancel Order
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-12 bg-gray-50 border border-dashed border-gray-200 rounded-2xl">
-                    <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="font-semibold text-gray-500">No orders placed yet</p>
-                    <p className="text-sm text-gray-400 mt-1">Book services to see your orders here.</p>
+                )}
+
+                {/* Pagination */}
+                {clientOrdersTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <button
+                      disabled={clientOrdersPage <= 1}
+                      onClick={() => setClientOrdersPage((prev) => Math.max(1, prev - 1))}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> Previous
+                    </button>
+                    <span className="text-xs font-medium text-gray-600">
+                      Page {clientOrdersPage} of {clientOrdersTotalPages}
+                    </span>
+                    <button
+                      disabled={clientOrdersPage >= clientOrdersTotalPages}
+                      onClick={() => setClientOrdersPage((prev) => Math.min(clientOrdersTotalPages, prev + 1))}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 disabled:opacity-40"
+                    >
+                      Next <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>

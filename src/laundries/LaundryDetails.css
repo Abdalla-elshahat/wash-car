@@ -98,6 +98,154 @@
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
+/* ── Coupons Button ── */
+.det-coupons-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  border: none;
+  border-radius: 50px;
+  padding: 9px 22px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+
+.det-coupons-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+}
+
+/* ── Disabled Topbar Buttons ── */
+.det-services-btn:disabled,
+.det-coupons-btn:disabled,
+.det-orders-btn:disabled,
+.det-edit-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(60%);
+}
+
+/* ── Coupons Modal ── */
+.cpn-modal-box {
+  max-width: 650px !important;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.cpn-icon {
+  background: #ede9fe !important;
+  color: #7c3aed !important;
+}
+
+.cpn-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.cpn-form-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+.cpn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cpn-empty {
+  text-align: center;
+  padding: 32px;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.cpn-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.cpn-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cpn-code-badge {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 0.875rem;
+  background: #ede9fe;
+  color: #6d28d9;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd6fe;
+}
+
+.cpn-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.cpn-desc {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.cpn-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.cpn-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cpn-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cpn-btn-icon.edit:hover {
+  background: #fef3c7;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.cpn-btn-icon.delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
 /* ── Edit Button ── */
 .det-edit-btn {
   display: inline-flex;

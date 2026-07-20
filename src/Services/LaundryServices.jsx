@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import Swal from 'sweetalert2';
 import Navbar from '../component/Navbar/Navbar';
 import { getLaundryById } from '../apicalls/laundry';
+import { createOrder, validateCoupon } from '../apicalls/order';
 import { Domain } from '../utels/const';
 import {
   ArrowLeft,
@@ -21,13 +22,15 @@ import {
   X,
   Search,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ShoppingBag,
+  Ticket
 } from 'lucide-react';
 
 function LaundryServices() {
   const { laundryId } = useParams();
   const navigate = useNavigate();
-  
+
   const [laundry, setLaundry] = useState(null);
   const [services, setServices] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +42,21 @@ function LaundryServices() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
 
-  // Form states
+  // Order Modal state
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedOrderService, setSelectedOrderService] = useState(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [orderNotes, setOrderNotes] = useState('عايز تنظيف سريع');
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState('stripe');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponResult, setCouponResult] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+
+  // Form states for add/edit service
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPrice, setFormPrice] = useState('');
@@ -49,7 +66,6 @@ function LaundryServices() {
   const [imagePreview, setImagePreview] = useState(null);
 
   const currentUserId = Cookies.get('userId');
-  const userRole = localStorage.getItem('userRole');
   const isOwner = laundry && (laundry.ownerId?._id === currentUserId || laundry.ownerId === currentUserId);
 
   const fetchLaundryAndServices = async () => {
@@ -98,6 +114,112 @@ function LaundryServices() {
     }
   };
 
+  // Open Order Modal
+  const openOrderModal = async (service) => {
+    setSelectedOrderService(service);
+    setOrderNotes('عايز تنظيف سريع');
+    setOrderPaymentMethod('stripe');
+    setCouponCode('');
+    setCouponResult(null);
+    setCouponError('');
+
+    try {
+      const token = Cookies.get('token');
+      if (token) {
+        const res = await fetch(`${Domain}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const uData = await res.json();
+          setCustomerName(uData.fullname || '');
+          setCustomerPhone(uData.phone || '');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    setShowOrderModal(true);
+  };
+
+  // Validate Coupon
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const res = await validateCoupon(couponCode.trim(), laundryId);
+      const basePrice = Number(selectedOrderService?.price) || 0;
+      let discount = 0;
+      if (res.discountType === 'percentage') {
+        discount = (basePrice * (res.discountValue || 0)) / 100;
+        if (res.maxDiscountAmount && res.maxDiscountAmount > 0) {
+          discount = Math.min(discount, res.maxDiscountAmount);
+        }
+      } else if (res.discountType === 'fixed') {
+        discount = res.discountValue || 0;
+      }
+      const priceAfterDiscount = Math.max(0, basePrice - discount);
+      setCouponResult({ ...res, discount, priceAfterDiscount });
+    } catch (err) {
+      setCouponError(err.message || 'Invalid coupon code');
+      setCouponResult(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  // Place Order
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+    if (!selectedOrderService) return;
+    setSubmittingOrder(true);
+    try {
+      const payload = {
+        laundryId: laundryId,
+        serviceId: selectedOrderService._id,
+        customerName: customerName,
+        phone: customerPhone,
+        address: customerAddress,
+        notes: orderNotes,
+        paymentMethod: orderPaymentMethod,
+      };
+      if (couponCode.trim()) {
+        payload.couponCode = couponCode.trim();
+      }
+
+      const res = await createOrder(payload);
+
+      setShowOrderModal(false);
+
+      let successMessage = `Order #${res.orderId?.slice(-8)} created successfully!`;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Order Placed!',
+        text: successMessage,
+        showCancelButton: true,
+        confirmButtonText: 'View My Orders',
+        cancelButtonText: 'Close',
+        confirmButtonColor: '#4f46e5',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/profile');
+        }
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Order Failed',
+        text: err.message || 'Could not create order.',
+        confirmButtonColor: '#ef4444',
+      });
+    } finally {
+      setSubmittingOrder(false);
+    }
+  };
+
+  // Create Service
   const openAddModal = () => {
     setFormTitle('');
     setFormDescription('');
@@ -109,31 +231,19 @@ function LaundryServices() {
     setShowAddModal(true);
   };
 
-  const openEditModal = (service) => {
-    setSelectedService(service);
-    setFormTitle(service.title || '');
-    setFormDescription(service.description || '');
-    setFormPrice(service.price || '');
-    setFormDiscount(service.discount || '');
-    setFormActive(service.active !== undefined ? service.active : true);
-    setFormImage(null);
-    setImagePreview(service.image ? `${Domain}/uploads/services/${service.image}` : null);
-    setShowEditModal(true);
-  };
-
   const handleCreateService = async (e) => {
     e.preventDefault();
     try {
       const token = Cookies.get('token');
-      const fd = new FormData();
-      fd.append('title', formTitle);
-      fd.append('description', formDescription);
-      fd.append('price', formPrice);
-      fd.append('discount', formDiscount || '0');
-      fd.append('laundryId', laundryId);
-      fd.append('active', formActive);
+      const formData = new FormData();
+      formData.append('title', formTitle);
+      formData.append('description', formDescription);
+      formData.append('price', formPrice);
+      formData.append('discount', formDiscount || '0');
+      formData.append('laundryId', laundryId);
+      formData.append('active', formActive ? 'true' : 'false');
       if (formImage) {
-        fd.append('image', formImage);
+        formData.append('image', formImage);
       }
 
       const res = await fetch(`${Domain}/services`, {
@@ -141,22 +251,22 @@ function LaundryServices() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: fd,
+        body: formData,
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to create service');
+        const errData = await res.json();
+        throw new Error(errData.message || 'Failed to create service');
       }
 
+      setShowAddModal(false);
       Swal.fire({
         title: 'Success!',
-        text: 'Service has been created successfully.',
+        text: 'Service created successfully!',
         icon: 'success',
-        confirmButtonColor: '#4f46e5',
+        timer: 1500,
+        showConfirmButton: false,
       });
-      
-      setShowAddModal(false);
       fetchLaundryAndServices();
     } catch (err) {
       Swal.fire({
@@ -168,18 +278,32 @@ function LaundryServices() {
     }
   };
 
+  // Edit Service
+  const openEditModal = (service) => {
+    setSelectedService(service);
+    setFormTitle(service.title || '');
+    setFormDescription(service.description || '');
+    setFormPrice(service.price || '');
+    setFormDiscount(service.discount || '');
+    setFormActive(service.active !== false);
+    setFormImage(null);
+    setImagePreview(service.image ? (service.image.startsWith('http') ? service.image : `${Domain}/uploads/services/${service.image}`) : null);
+    setShowEditModal(true);
+  };
+
   const handleUpdateService = async (e) => {
     e.preventDefault();
+    if (!selectedService) return;
     try {
       const token = Cookies.get('token');
-      const fd = new FormData();
-      fd.append('title', formTitle);
-      fd.append('description', formDescription);
-      fd.append('price', formPrice);
-      fd.append('discount', formDiscount || '0');
-      fd.append('active', formActive);
+      const formData = new FormData();
+      formData.append('title', formTitle);
+      formData.append('description', formDescription);
+      formData.append('price', formPrice);
+      formData.append('discount', formDiscount || '0');
+      formData.append('active', formActive ? 'true' : 'false');
       if (formImage) {
-        fd.append('image', formImage);
+        formData.append('image', formImage);
       }
 
       const res = await fetch(`${Domain}/services/${selectedService._id}`, {
@@ -187,22 +311,22 @@ function LaundryServices() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: fd,
+        body: formData,
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to update service');
+        const errData = await res.json();
+        throw new Error(errData.message || 'Failed to update service');
       }
 
+      setShowEditModal(false);
       Swal.fire({
         title: 'Updated!',
-        text: 'Service updated successfully.',
+        text: 'Service updated successfully!',
         icon: 'success',
-        confirmButtonColor: '#4f46e5',
+        timer: 1500,
+        showConfirmButton: false,
       });
-      
-      setShowEditModal(false);
       fetchLaundryAndServices();
     } catch (err) {
       Swal.fire({
@@ -214,39 +338,41 @@ function LaundryServices() {
     }
   };
 
-  const handleDeleteService = async (id) => {
-    const confirmResult = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'Do you want to delete this service permanently?',
+  // Delete Service
+  const handleDeleteService = async (serviceId) => {
+    const result = await Swal.fire({
+      title: 'Delete Service?',
+      text: 'Are you sure you want to delete this service? This action cannot be undone.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
     });
 
-    if (confirmResult.isConfirmed) {
+    if (result.isConfirmed) {
       try {
         const token = Cookies.get('token');
-        const res = await fetch(`${Domain}/services/${id}`, {
+        const res = await fetch(`${Domain}/services/${serviceId}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        const data = await res.json();
         if (!res.ok) {
-          throw new Error(data.message || 'Failed to delete service');
+          const errData = await res.json();
+          throw new Error(errData.message || 'Failed to delete service');
         }
 
         Swal.fire({
           title: 'Deleted!',
-          text: 'Service deleted successfully.',
+          text: 'Service has been deleted.',
           icon: 'success',
-          confirmButtonColor: '#4f46e5',
+          timer: 1500,
+          showConfirmButton: false,
         });
-        
         fetchLaundryAndServices();
       } catch (err) {
         Swal.fire({
@@ -278,45 +404,36 @@ function LaundryServices() {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
-          <p className="text-gray-500 font-medium">Loading services...</p>
-        </div>
-      </>
+      <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
+        <p className="text-gray-500 font-medium">Loading services...</p>
+      </div>
     );
   }
 
   if (error || !laundry) {
     return (
-      <>
-        <Navbar />
-        <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50 px-4">
-          <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 text-center max-w-md shadow-sm">
-            <AlertCircle className="mx-auto text-red-500 mb-3" size={48} />
-            <p className="font-bold text-lg mb-2">Error Occurred</p>
-            <p className="text-sm mb-4">{error || 'Laundry details could not be loaded.'}</p>
-            <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-xl transition duration-200" onClick={() => navigate(-1)}>
-              Go Back
-            </button>
-          </div>
+      <div className="flex flex-col items-center justify-center min-h-[80vh] bg-gray-50 px-4">
+        <div className="bg-red-50 text-red-700 p-6 rounded-2xl border border-red-100 text-center max-w-md shadow-sm">
+          <AlertCircle className="mx-auto text-red-500 mb-3" size={48} />
+          <p className="font-bold text-lg mb-2">Error Occurred</p>
+          <p className="text-sm mb-4">{error || 'Laundry details could not be loaded.'}</p>
+          <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-xl transition duration-200" onClick={() => navigate(-1)}>
+            Go Back
+          </button>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/40 pb-20">
-        
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/40 pb-20">
+
         {/* Laundry Header Card */}
         <div className="bg-gradient-to-r from-indigo-900 to-purple-900 text-white shadow-xl relative overflow-hidden py-12 px-6">
-          {/* Decorative gradients */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
-          
+
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
             <div className="flex items-center gap-5">
               <div className="h-20 w-20 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg flex-shrink-0">
@@ -334,7 +451,7 @@ function LaundryServices() {
                   </span>
                 </div>
                 <p className="text-indigo-200 text-sm mt-1 max-w-xl line-clamp-2">{laundry.description || "No description provided."}</p>
-                
+
                 <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
                   {laundry.phone && (
                     <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
@@ -364,7 +481,7 @@ function LaundryServices() {
                 <ArrowLeft size={16} />
                 <span>Back</span>
               </button>
-              
+
               {isOwner && (
                 <button
                   onClick={openAddModal}
@@ -380,14 +497,14 @@ function LaundryServices() {
 
         {/* Main Content Area */}
         <div className="max-w-6xl mx-auto px-6 mt-12">
-          
+
           {/* Filters & Section Title */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-2xl border border-gray-150 shadow-sm">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Available Services</h2>
               <p className="text-xs text-gray-500 mt-0.5">Explore premium services and special discounts</p>
             </div>
-            
+
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
@@ -465,8 +582,8 @@ function LaundryServices() {
                         {service.description}
                       </p>
 
-                      {/* Pricing */}
-                      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                      {/* Pricing and Action */}
+                      <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
                         <div>
                           <p className="text-xs text-gray-400 font-medium">Price</p>
                           <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -477,25 +594,33 @@ function LaundryServices() {
                           </div>
                         </div>
 
-                        {/* Owner action controls */}
-                        {isOwner && (
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => openEditModal(service)}
-                              className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl transition duration-150"
-                              title="Edit Service"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteService(service._id)}
-                              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition duration-150"
-                              title="Delete Service"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openOrderModal(service)}
+                            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow-md transition transform active:scale-95"
+                          >
+                            <ShoppingBag size={14} /> Order Now
+                          </button>
+
+                          {isOwner && (
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => openEditModal(service)}
+                                className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl transition duration-150"
+                                title="Edit Service"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteService(service._id)}
+                                className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl transition duration-150"
+                                title="Delete Service"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -505,18 +630,213 @@ function LaundryServices() {
           )}
         </div>
 
+        {/* Order Modal */}
+        {showOrderModal && selectedOrderService && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200">
+              <div className="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-white/10 rounded-xl">
+                    <ShoppingBag size={20} className="text-indigo-200" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Book Wash Order</h3>
+                    <p className="text-xs text-indigo-200">{selectedOrderService.title}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowOrderModal(false)} className="text-white/80 hover:text-white transition">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handlePlaceOrder} className="p-6 space-y-4 overflow-y-auto">
+                {/* Service Summary Card */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Service</span>
+                    <p className="font-bold text-gray-800 text-sm">{selectedOrderService.title}</p>
+                    <p className="text-xs text-indigo-600 font-semibold">{laundry.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price</span>
+                    <p className="text-lg font-extrabold text-indigo-600">{selectedOrderService.price} EGP</p>
+                  </div>
+                </div>
+
+                {/* Customer Contact & Address Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="e.g. احمد محمد"
+                      className="w-full p-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="e.g. 01012345678"
+                      className="w-full p-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Delivery Address / Location *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="e.g. 15 الشارع الرئيسي، المعادي، القاهرة"
+                    className="w-full p-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Order Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    placeholder="e.g. عايز تنظيف سريع..."
+                    className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm transition"
+                  />
+                </div>
+
+                {/* Coupon Code Input */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Discount Coupon (Optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        setCouponResult(null);
+                        setCouponError('');
+                      }}
+                      placeholder="e.g. SAVE10"
+                      className="flex-grow p-2.5 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none text-sm uppercase font-mono font-bold transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleValidateCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition shadow-sm"
+                    >
+                      {couponLoading ? 'Checking...' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponError && <p className="text-xs text-red-500 font-medium mt-1">{couponError}</p>}
+                  {couponResult && (
+                    <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between">
+                      <span className="font-semibold flex items-center gap-1">
+                        <Ticket className="w-3.5 h-3.5" /> Coupon applied! (-{couponResult.discount} EGP)
+                      </span>
+                      <span className="font-extrabold text-sm">
+                        Final: {couponResult.priceAfterDiscount} EGP
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                    Payment Method *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'stripe', label: 'Stripe (Card)' },
+                      { id: 'cash', label: 'Cash on Delivery' },
+                      { id: 'card', label: 'Card on Pickup' },
+                      { id: 'online', label: 'Online Payment' },
+                    ].map((m) => (
+                      <label
+                        key={m.id}
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition text-xs font-bold ${
+                          orderPaymentMethod === m.id
+                            ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-sm'
+                            : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <span>{m.label}</span>
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value={m.id}
+                          checked={orderPaymentMethod === m.id}
+                          onChange={(e) => setOrderPaymentMethod(e.target.value)}
+                          className="accent-indigo-600"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="submit"
+                    disabled={submittingOrder}
+                    className="flex-grow bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
+                  >
+                    {submittingOrder ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Placing Order...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag size={16} /> Confirm Order ({couponResult ? couponResult.priceAfterDiscount : selectedOrderService.price} EGP)
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowOrderModal(false)}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-5 rounded-xl transition text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Add Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100">
-              <div className="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 text-white flex justify-between items-center">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
+              <div className="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 text-white flex justify-between items-center shrink-0">
                 <h3 className="font-bold text-lg">Add New Service</h3>
                 <button onClick={() => setShowAddModal(false)} className="text-white hover:text-gray-200">
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateService} className="p-6 space-y-4">
+              <form onSubmit={handleCreateService} className="p-6 space-y-4 overflow-y-auto">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Service Title *</label>
                   <input
@@ -524,21 +844,20 @@ function LaundryServices() {
                     required
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="e.g. Full Exterior Wash"
+                    placeholder="e.g. Full Interior & Exterior Wash"
                     className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Description *</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Description</label>
                   <textarea
-                    required
+                    rows="3"
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Describe what is included in this service..."
-                    rows={3}
+                    placeholder="Describe what's included in this service..."
                     className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
-                  />
+                  ></textarea>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -550,7 +869,6 @@ function LaundryServices() {
                       min="1"
                       value={formPrice}
                       onChange={(e) => setFormPrice(e.target.value)}
-                      placeholder="100"
                       className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
                     />
                   </div>
@@ -562,7 +880,6 @@ function LaundryServices() {
                       min="0"
                       value={formDiscount}
                       onChange={(e) => setFormDiscount(e.target.value)}
-                      placeholder="0"
                       className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
                     />
                   </div>
@@ -573,7 +890,7 @@ function LaundryServices() {
                   <div className="mt-1 flex items-center gap-4">
                     <label className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl border border-gray-200 cursor-pointer transition text-sm">
                       <ImageIcon size={16} />
-                      Choose Image
+                      Upload Image
                       <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                     </label>
                     {imagePreview && (
@@ -591,7 +908,7 @@ function LaundryServices() {
                     className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
                   />
                   <label htmlFor="active-add" className="text-sm font-semibold text-gray-700 select-none cursor-pointer">
-                    Enable this service for customers immediately
+                    Enable this service for customers
                   </label>
                 </div>
 
@@ -600,7 +917,7 @@ function LaundryServices() {
                     type="submit"
                     className="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-1.5"
                   >
-                    <Save size={16} /> Save Service
+                    <Save size={16} /> Create Service
                   </button>
                   <button
                     type="button"
@@ -616,17 +933,17 @@ function LaundryServices() {
         )}
 
         {/* Edit Modal */}
-        {showEditModal && (
+        {showEditModal && selectedService && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100">
-              <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white flex justify-between items-center">
-                <h3 className="font-bold text-lg">Edit Service Details</h3>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
+              <div className="bg-gradient-to-r from-indigo-900 to-purple-900 p-5 text-white flex justify-between items-center shrink-0">
+                <h3 className="font-bold text-lg">Edit Service</h3>
                 <button onClick={() => setShowEditModal(false)} className="text-white hover:text-gray-200">
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleUpdateService} className="p-6 space-y-4">
+              <form onSubmit={handleUpdateService} className="p-6 space-y-4 overflow-y-auto">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Service Title *</label>
                   <input
@@ -639,14 +956,13 @@ function LaundryServices() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Description *</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Description</label>
                   <textarea
-                    required
+                    rows="3"
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    rows={3}
                     className="w-full p-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
-                  />
+                  ></textarea>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -722,7 +1038,6 @@ function LaundryServices() {
         )}
 
       </div>
-    </>
   );
 }
 

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   MapPin, Phone, Clock, Star, CheckCircle, XCircle,
   AlertCircle, Loader2, Store, ArrowLeft, Calendar,
   ToggleLeft, ToggleRight, Hash, Pencil, X, Trash2, ShieldAlert,
-  Sparkles, ShoppingBag,
+  Sparkles, ShoppingBag, Ticket, Plus,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
@@ -20,6 +20,12 @@ import {
   updateLaundryReview,
   deleteLaundryReview
 } from "../apicalls/laundry";
+import {
+  getLaundryCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon
+} from "../apicalls/coupon";
 import { Domain } from "../utels/const";
 import "./LaundryDetails.css";
 
@@ -29,6 +35,26 @@ const statusConfig = {
   approved: { label: "Approved", icon: CheckCircle, className: "det-status-approved" },
   rejected: { label: "Rejected", icon: XCircle,     className: "det-status-rejected" },
 };
+
+function parseLaundryFields(laundry) {
+  if (!laundry) return laundry;
+  const parsed = { ...laundry };
+  if (typeof parsed.workingHours === "string") {
+    try {
+      parsed.workingHours = JSON.parse(parsed.workingHours);
+    } catch (e) {
+      console.error("Failed to parse workingHours:", e);
+    }
+  }
+  if (typeof parsed.location === "string") {
+    try {
+      parsed.location = JSON.parse(parsed.location);
+    } catch (e) {
+      console.error("Failed to parse location:", e);
+    }
+  }
+  return parsed;
+}
 
 function getLogo(logo) {
   if (!logo) return null;
@@ -265,6 +291,342 @@ function EditModal({ laundry, onClose, onUpdated }) {
   );
 }
 
+/* ─── Coupons Modal ─── */
+function CouponsModal({ laundryId, onClose }) {
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState(null);
+
+  const [formCode, setFormCode] = useState("");
+  const [formTitle, setFormTitle] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formDiscountType, setFormDiscountType] = useState("percentage");
+  const [formDiscountValue, setFormDiscountValue] = useState("");
+  const [formMinOrderAmount, setFormMinOrderAmount] = useState("");
+  const [formMaxDiscountAmount, setFormMaxDiscountAmount] = useState("");
+  const [formUsageLimit, setFormUsageLimit] = useState("");
+  const [formUsagePerUser, setFormUsagePerUser] = useState("1");
+  const [formValidFrom, setFormValidFrom] = useState("");
+  const [formExpiresAt, setFormExpiresAt] = useState("");
+  const [formAppliesTo, setFormAppliesTo] = useState("all_services");
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadCoupons = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getLaundryCoupons(laundryId);
+      setCoupons(data);
+    } catch (err) {
+      toast.error(err.message || "Failed to load coupons");
+    } finally {
+      setLoading(false);
+    }
+  }, [laundryId]);
+
+  useEffect(() => {
+    loadCoupons();
+  }, [loadCoupons]);
+
+  const resetForm = () => {
+    setFormCode("");
+    setFormTitle("");
+    setFormDescription("");
+    setFormDiscountType("percentage");
+    setFormDiscountValue("");
+    setFormMinOrderAmount("");
+    setFormMaxDiscountAmount("");
+    setFormUsageLimit("");
+    setFormUsagePerUser("1");
+    setFormValidFrom("");
+    setFormExpiresAt("");
+    setFormAppliesTo("all_services");
+    setFormIsActive(true);
+    setEditingCoupon(null);
+    setShowAddForm(false);
+  };
+
+  const openEdit = (c) => {
+    setEditingCoupon(c);
+    setFormCode(c.code || "");
+    setFormTitle(c.title || "");
+    setFormDescription(c.description || "");
+    setFormDiscountType(c.discountType || "percentage");
+    setFormDiscountValue(c.discountValue ? c.discountValue.toString() : "");
+    setFormMinOrderAmount(c.minOrderAmount ? c.minOrderAmount.toString() : "");
+    setFormMaxDiscountAmount(c.maxDiscountAmount ? c.maxDiscountAmount.toString() : "");
+    setFormUsageLimit(c.usageLimit ? c.usageLimit.toString() : "");
+    setFormUsagePerUser(c.usagePerUser ? c.usagePerUser.toString() : "1");
+    setFormValidFrom(c.validFrom ? c.validFrom.split("T")[0] : "");
+    setFormExpiresAt(c.expiresAt ? c.expiresAt.split("T")[0] : "");
+    setFormAppliesTo(c.appliesTo || "all_services");
+    setFormIsActive(c.isActive !== false);
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload = {
+        laundryId,
+        code: formCode.toUpperCase(),
+        title: formTitle,
+        description: formDescription,
+        discountType: formDiscountType,
+        discountValue: Number(formDiscountValue),
+        minOrderAmount: formMinOrderAmount ? Number(formMinOrderAmount) : undefined,
+        maxDiscountAmount: formMaxDiscountAmount ? Number(formMaxDiscountAmount) : undefined,
+        usageLimit: formUsageLimit ? Number(formUsageLimit) : undefined,
+        usagePerUser: formUsagePerUser ? Number(formUsagePerUser) : 1,
+        validFrom: formValidFrom || undefined,
+        expiresAt: formExpiresAt || undefined,
+        appliesTo: formAppliesTo,
+        isActive: formIsActive,
+      };
+
+      if (editingCoupon) {
+        await updateCoupon(editingCoupon._id, payload);
+        toast.success("Coupon updated successfully!");
+      } else {
+        await createCoupon(payload);
+        toast.success("Coupon created successfully!");
+      }
+      resetForm();
+      loadCoupons();
+    } catch (err) {
+      toast.error(err.message || "Failed to save coupon");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (couponId) => {
+    const res = await Swal.fire({
+      title: "Delete Coupon?",
+      text: "Are you sure you want to delete this coupon?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      confirmButtonText: "Yes, Delete",
+    });
+    if (res.isConfirmed) {
+      try {
+        await deleteCoupon(couponId);
+        toast.success("Coupon deleted");
+        loadCoupons();
+      } catch (err) {
+        toast.error(err.message || "Failed to delete coupon");
+      }
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-box cpn-modal-box" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="modal-header">
+          <div className="modal-title-row">
+            <div className="modal-icon-wrap cpn-icon">
+              <Ticket size={20} />
+            </div>
+            <h2 className="modal-title">Manage Laundry Coupons</h2>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Action button */}
+        {!showAddForm && (
+          <div className="cpn-actions-row">
+            <button className="btn-submit btn-edit" onClick={() => setShowAddForm(true)}>
+              <Plus size={16} /> Create New Coupon
+            </button>
+          </div>
+        )}
+
+        {/* Add/Edit Form */}
+        {showAddForm ? (
+          <form onSubmit={handleSubmit} className="modal-form cpn-form">
+            <h3 className="cpn-form-title">{editingCoupon ? "Edit Coupon" : "Create New Coupon"}</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Coupon Code <span className="required">*</span></label>
+                <input
+                  className="form-input font-mono uppercase font-bold"
+                  value={formCode}
+                  onChange={(e) => setFormCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. SAVE20"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Title <span className="required">*</span></label>
+                <input
+                  className="form-input"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  placeholder="e.g. 20% Discount"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <input
+                className="form-input"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="e.g. Coupon for new customers"
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Discount Type <span className="required">*</span></label>
+                <select
+                  className="form-input"
+                  value={formDiscountType}
+                  onChange={(e) => setFormDiscountType(e.target.value)}
+                >
+                  <option value="percentage">Percentage (%)</option>
+                  <option value="fixed">Fixed Amount ($)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Discount Value <span className="required">*</span></label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={formDiscountValue}
+                  onChange={(e) => setFormDiscountValue(e.target.value)}
+                  placeholder="e.g. 20"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Min Order Amount ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={formMinOrderAmount}
+                  onChange={(e) => setFormMinOrderAmount(e.target.value)}
+                  placeholder="e.g. 200"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Max Discount Cap ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={formMaxDiscountAmount}
+                  onChange={(e) => setFormMaxDiscountAmount(e.target.value)}
+                  placeholder="e.g. 100"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Total Usage Limit</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={formUsageLimit}
+                  onChange={(e) => setFormUsageLimit(e.target.value)}
+                  placeholder="e.g. 500"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Usage Per User</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={formUsagePerUser}
+                  onChange={(e) => setFormUsagePerUser(e.target.value)}
+                  placeholder="e.g. 1"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Valid From</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={formValidFrom}
+                  onChange={(e) => setFormValidFrom(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Expires At</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={formExpiresAt}
+                  onChange={(e) => setFormExpiresAt(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>
+              <button type="submit" className="btn-submit btn-edit" disabled={submitting}>
+                {submitting ? "Saving..." : (editingCoupon ? "Update Coupon" : "Create Coupon")}
+              </button>
+            </div>
+          </form>
+        ) : (
+          /* Coupons List */
+          <div className="cpn-list">
+            {loading ? (
+              <div className="det-center"><Loader2 size={24} className="det-spin" /></div>
+            ) : coupons.length === 0 ? (
+              <div className="cpn-empty">No coupons found for this laundry.</div>
+            ) : (
+              coupons.map((c) => (
+                <div key={c._id} className="cpn-card">
+                  <div className="cpn-card-left">
+                    <span className="cpn-code-badge">{c.code}</span>
+                    <div>
+                      <p className="cpn-title">{c.title || c.code}</p>
+                      <p className="cpn-desc">{c.description || `${c.discountValue}${c.discountType === "percentage" ? "%" : "$"} off`}</p>
+                      <p className="cpn-meta">
+                        Limit: {c.usedCount || 0}/{c.usageLimit || "∞"} | Expires: {c.expiresAt ? formatDate(c.expiresAt) : "Never"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="cpn-card-actions">
+                    <button className="cpn-btn-icon edit" onClick={() => openEdit(c)}>
+                      <Pencil size={14} />
+                    </button>
+                    <button className="cpn-btn-icon delete" onClick={() => handleDelete(c._id)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function LaundryDetails() {
   const { id } = useParams();
@@ -274,6 +636,7 @@ export default function LaundryDetails() {
   const [error, setError]     = useState("");
   const [showEdit,    setShowEdit]   = useState(false);
   const [showDelete,  setShowDelete]  = useState(false);
+  const [showCoupons, setShowCoupons] = useState(false);
   const [deleting,    setDeleting]    = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -293,7 +656,7 @@ export default function LaundryDetails() {
       try {
         setLoading(true);
         const data = await getLaundryById(id);
-        setLaundry(data);
+        setLaundry(parseLaundryFields(data));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -323,7 +686,7 @@ export default function LaundryDetails() {
   const isLaundryOwner = ownerId === currentUserId;
 
   function handleUpdated(updated) {
-    setLaundry((prev) => ({ ...prev, ...updated }));
+    setLaundry((prev) => parseLaundryFields({ ...prev, ...updated }));
   }
 
   async function handleToggleActive() {
@@ -442,28 +805,22 @@ export default function LaundryDetails() {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="det-center">
-          <Loader2 size={44} className="det-spin" />
-          <p>Loading laundry details…</p>
-        </div>
-      </>
+      <div className="det-center">
+        <Loader2 size={44} className="det-spin" />
+        <p>Loading laundry details…</p>
+      </div>
     );
   }
 
   if (error || !laundry) {
     return (
-      <>
-        <Navbar />
-        <div className="det-center det-error">
-          <XCircle size={44} />
-          <p>{error || "Laundry not found."}</p>
-          <button className="det-back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={16} /> Go Back
-          </button>
-        </div>
-      </>
+      <div className="det-center det-error">
+        <XCircle size={44} />
+        <p>{error || "Laundry not found."}</p>
+        <button className="det-back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} /> Go Back
+        </button>
+      </div>
     );
   }
 
@@ -474,7 +831,6 @@ export default function LaundryDetails() {
 
   return (
     <>
-      <Navbar />
       <div className="det-page">
 
         {/* Top bar */}
@@ -483,16 +839,39 @@ export default function LaundryDetails() {
             <button className="det-back-btn" onClick={() => navigate(-1)}>
               <ArrowLeft size={16} /> Back to My Laundries
             </button>
-            <button className="det-services-btn" onClick={() => navigate(`/services/${laundry._id}`)}>
+            <button
+              className="det-services-btn"
+              disabled={!laundry.isActive}
+              title={!laundry.isActive ? "Laundry is inactive. Activate it to view services." : undefined}
+              onClick={() => navigate(`/services/${laundry._id}`)}
+            >
               <Sparkles size={16} /> View Services
             </button>
           </div>
           {isLaundryOwner && (
             <div className="det-topbar-actions">
-              <button className="det-orders-btn" onClick={() => navigate(`/orders?laundryId=${laundry._id}`)}>
+              <button
+                className="det-coupons-btn"
+                disabled={!laundry.isActive}
+                title={!laundry.isActive ? "Laundry is inactive. Activate it to manage coupons." : undefined}
+                onClick={() => setShowCoupons(true)}
+              >
+                <Ticket size={16} /> Manage Coupons
+              </button>
+              <button
+                className="det-orders-btn"
+                disabled={!laundry.isActive}
+                title={!laundry.isActive ? "Laundry is inactive. Activate it to view orders." : undefined}
+                onClick={() => navigate(`/orders?laundryId=${laundry._id}`)}
+              >
                 <ShoppingBag size={16} /> View Orders
               </button>
-              <button className="det-edit-btn" onClick={() => setShowEdit(true)}>
+              <button
+                className="det-edit-btn"
+                disabled={!laundry.isActive}
+                title={!laundry.isActive ? "Laundry is inactive. Activate it to edit details." : undefined}
+                onClick={() => setShowEdit(true)}
+              >
                 <Pencil size={16} /> Edit Laundry
               </button>
               <button className="det-delete-btn"
@@ -817,6 +1196,14 @@ export default function LaundryDetails() {
           onConfirm={handleDelete}
           deleting={deleting}
           error={deleteError}
+        />
+      )}
+
+      {/* Coupons Modal */}
+      {showCoupons && (
+        <CouponsModal
+          laundryId={laundry._id}
+          onClose={() => setShowCoupons(false)}
         />
       )}
     </>

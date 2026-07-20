@@ -31,6 +31,26 @@ function getLaundryLogo(logo) {
   return `${Domain}/uploads/laundries/${logo}`;
 }
 
+function parseLaundryFields(laundry) {
+  if (!laundry) return laundry;
+  const parsed = { ...laundry };
+  if (typeof parsed.workingHours === "string") {
+    try {
+      parsed.workingHours = JSON.parse(parsed.workingHours);
+    } catch (e) {
+      console.error("Failed to parse workingHours:", e);
+    }
+  }
+  if (typeof parsed.location === "string") {
+    try {
+      parsed.location = JSON.parse(parsed.location);
+    } catch (e) {
+      console.error("Failed to parse location:", e);
+    }
+  }
+  return parsed;
+}
+
 /* ─── Default form state ─── */
 const defaultForm = {
   name: "",
@@ -352,7 +372,7 @@ export default function OwnerLaundries() {
     async function load() {
       try {
         const data = await getOwnerLaundries();
-        setLaundries(data);
+        setLaundries(data.map(parseLaundryFields));
       } catch (err) {
         setError("Failed to load your laundries. Please try again.");
       } finally {
@@ -364,16 +384,15 @@ export default function OwnerLaundries() {
 
   function handleCreated(newLaundry) {
     if (newLaundry && newLaundry._id) {
-      setLaundries((prev) => [newLaundry, ...prev]);
+      setLaundries((prev) => [parseLaundryFields(newLaundry), ...prev]);
     } else {
       // If server doesn't return the created object, refetch
-      getOwnerLaundries().then(setLaundries).catch(() => {});
+      getOwnerLaundries().then((data) => setLaundries(data.map(parseLaundryFields))).catch(() => {});
     }
   }
 
   return (
     <>
-      <Navbar />
       <div className="owner-laundries-page">
         {/* Page Header */}
         <div className="owner-laundries-header">

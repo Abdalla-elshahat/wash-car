@@ -2,9 +2,8 @@ import React from 'react'
 import Clients from './clients/client'
 import Orders from './orders/orders'
 import Home from './Home'
-import Service from './Services/service'
 import LaundryServices from './Services/LaundryServices'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Login from "./Auth/Login/Login";
 import SignUp from "./Auth/SignUp/SignUp";
 import ForgetPassword from "./Auth/ForgotPassword/ForgotPassword";
@@ -17,9 +16,16 @@ import LaundryDetails from './laundries/LaundryDetails'
 import AdminInactiveLaundries from './laundries/AdminInactiveLaundries'
 import PrivateRoute from './PrivateRoute'
 import PublicRoute from './PublicRoute'
+import Navbar from './component/Navbar/Navbar'
+
 function Routeapp() {
+  const location = useLocation();
+  const authRoutes = ["/login", "/signup", "/forgetpass", "/changepass", "/verify", "/verifyforget"];
+  const isAuthPage = authRoutes.includes(location.pathname.toLowerCase());
+
   return (
     <div>
+      {!isAuthPage && <Navbar />}
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />

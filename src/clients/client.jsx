@@ -183,7 +183,6 @@ function Clients() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gray-50/50 pb-16">
         {/* Header Hero Banner */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 text-white py-10 px-6 shadow-lg mb-8">
