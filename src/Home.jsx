@@ -88,7 +88,7 @@ function Home() {
                   <FileText size={18} />
                   <span>الطلبات</span>
                 </Link>
-                <Link to="/services" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
+                <Link to="/laundries/owner" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/10 backdrop-blur-sm transition duration-200 shadow-sm">
                   <Settings size={18} />
                   <span>خدمات</span>
                 </Link>

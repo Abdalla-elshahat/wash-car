@@ -16,30 +16,30 @@ import OwnerLaundries from './laundries/OwnerLaundries'
 import LaundryDetails from './laundries/LaundryDetails'
 import AdminInactiveLaundries from './laundries/AdminInactiveLaundries'
 import PrivateRoute from './PrivateRoute'
-function Routeapp(){
-    return(
-  <div>
-    <Routes>
-          <Route path="/login" element={<Login/>} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/forgetpass" element={<ForgetPassword />} />
-          <Route path="/changepass" element={<Repass />} />
-          <Route path="/Verify" element={<Verify />} />
-          <Route path="/Verifyforget" element={<Verifyforget />} />
+import PublicRoute from './PublicRoute'
+function Routeapp() {
+  return (
+    <div>
+      <Routes>
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+        <Route path="/forgetpass" element={<PublicRoute><ForgetPassword /></PublicRoute>} />
+        <Route path="/changepass" element={<PublicRoute><Repass /></PublicRoute>} />
+        <Route path="/Verify" element={<PublicRoute><Verify /></PublicRoute>} />
+        <Route path="/Verifyforget" element={<PublicRoute><Verifyforget /></PublicRoute>} />
 
-    <Route path="/" element={<PrivateRoute><Home/></PrivateRoute>} />
-     <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
-     <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} /> 
-      <Route path="/services" element={<PrivateRoute><Service/></PrivateRoute>} /> 
-      <Route path="/services/:laundryId" element={<PrivateRoute><LaundryServices/></PrivateRoute>} /> 
-      <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute> }/>
-      <Route path="/laundries/owner" element={<PrivateRoute><OwnerLaundries /></PrivateRoute>}/>
-      <Route path="/laundries/:id"    element={<PrivateRoute><LaundryDetails /></PrivateRoute>}/>
-      <Route path="/admin/laundries/inactive" element={<PrivateRoute><AdminInactiveLaundries /></PrivateRoute>}/>
+        <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+        <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
+        <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
+        <Route path="/services/:laundryId" element={<PrivateRoute><LaundryServices /></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        <Route path="/laundries/owner" element={<PrivateRoute><OwnerLaundries /></PrivateRoute>} />
+        <Route path="/laundries/:id" element={<PrivateRoute><LaundryDetails /></PrivateRoute>} />
+        <Route path="/admin/laundries/inactive" element={<PrivateRoute><AdminInactiveLaundries /></PrivateRoute>} />
 
-    </Routes>
-  </div>
-    )
+      </Routes>
+    </div>
+  )
 }
 
 export default Routeapp;
