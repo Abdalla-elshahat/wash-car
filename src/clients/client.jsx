@@ -3,6 +3,7 @@ import { Domain } from '../utels/const';
 import Navbar from '../component/Navbar/Navbar';
 import Addclient from './addclient';
 import EditClient from './edite';
+import Swal from 'sweetalert2';
 import {
   Users,
   UserCheck,
@@ -24,7 +25,8 @@ import {
   ChevronRight,
   RefreshCw,
   UserX,
-  Activity
+  Activity,
+  RotateCcw
 } from 'lucide-react';
 
 function Clients() {
@@ -69,6 +71,71 @@ function Clients() {
       setError(err.message || 'Something went wrong while fetching users.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function returnUser(id) {
+    const confirmResult = await Swal.fire({
+      title: 'Restore User?',
+      text: 'Do you want to restore this user account/email?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#3b82f6',
+      confirmButtonText: 'Yes, restore!',
+      cancelButtonText: 'Cancel',
+      background: '#ffffff',
+      customClass: {
+        popup: 'rounded-2xl shadow-xl border border-gray-100',
+        confirmButton: 'px-5 py-2.5 rounded-xl font-semibold text-white shadow-sm',
+        cancelButton: 'px-5 py-2.5 rounded-xl font-semibold text-gray-700 bg-gray-150 shadow-sm'
+      }
+    });
+
+    if (confirmResult.isConfirmed) {
+      try {
+        const res = await fetch(`${Domain}/users/return`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: id }),
+        });
+
+        if (res.ok) {
+          Swal.fire({
+            title: 'Restored!',
+            text: 'The user account has been successfully restored.',
+            icon: 'success',
+            confirmButtonColor: '#3b82f6',
+            customClass: {
+              popup: 'rounded-2xl'
+            }
+          });
+          getUsers(currentPage);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          Swal.fire({
+            title: 'Error!',
+            text: errData.message || 'Something went wrong.',
+            icon: 'error',
+            confirmButtonColor: '#3b82f6',
+            customClass: {
+              popup: 'rounded-2xl'
+            }
+          });
+        }
+      } catch (err) {
+        Swal.fire({
+          title: 'Network Error!',
+          text: 'Could not connect to the server.',
+          icon: 'error',
+          confirmButtonColor: '#3b82f6',
+          customClass: {
+            popup: 'rounded-2xl'
+          }
+        });
+      }
     }
   }
 
@@ -402,6 +469,15 @@ function Clients() {
                             <Edit3 size={14} />
                             <span>Edit</span>
                           </button>
+                          {!isActiveUser && (
+                            <button
+                              onClick={() => returnUser(user._id)}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl border border-green-150 hover:border-green-200 text-green-600 hover:bg-green-50/50 text-sm font-semibold transition"
+                            >
+                              <RotateCcw size={14} />
+                              <span>Restore</span>
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -502,6 +578,15 @@ function Clients() {
                                 >
                                   <Edit3 size={14} />
                                 </button>
+                                {!isActiveUser && (
+                                  <button
+                                    onClick={() => returnUser(user._id)}
+                                    className="p-2 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-200 text-green-500 hover:text-green-600 rounded-xl transition"
+                                    title="Restore user"
+                                  >
+                                    <RotateCcw size={14} />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </td>

@@ -4,6 +4,7 @@ import {
   MapPin, Phone, Clock, Star, CheckCircle, XCircle,
   AlertCircle, Loader2, Store, ArrowLeft, Calendar,
   ToggleLeft, ToggleRight, Hash, Pencil, X, Trash2, ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
@@ -478,9 +479,14 @@ export default function LaundryDetails() {
 
         {/* Top bar */}
         <div className="det-topbar">
-          <button className="det-back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={16} /> Back to My Laundries
-          </button>
+          <div className="det-topbar-left">
+            <button className="det-back-btn" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} /> Back to My Laundries
+            </button>
+            <button className="det-services-btn" onClick={() => navigate(`/services/${laundry._id}`)}>
+              <Sparkles size={16} /> View Services
+            </button>
+          </div>
           {isLaundryOwner && (
             <div className="det-topbar-actions">
               <button className="det-edit-btn" onClick={() => setShowEdit(true)}>

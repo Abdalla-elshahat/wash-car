@@ -3,6 +3,7 @@ import Clients from './clients/client'
 import Orders from './orders/orders'
 import Home from './Home'
 import Service from './Services/service'
+import LaundryServices from './Services/LaundryServices'
 import { Route, Routes } from 'react-router-dom'
 import Login from "./Auth/Login/Login";
 import SignUp from "./Auth/SignUp/SignUp";
@@ -30,6 +31,7 @@ function Routeapp(){
      <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
      <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} /> 
       <Route path="/services" element={<PrivateRoute><Service/></PrivateRoute>} /> 
+      <Route path="/services/:laundryId" element={<PrivateRoute><LaundryServices/></PrivateRoute>} /> 
       <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute> }/>
       <Route path="/laundries/owner" element={<PrivateRoute><OwnerLaundries /></PrivateRoute>}/>
       <Route path="/laundries/:id"    element={<PrivateRoute><LaundryDetails /></PrivateRoute>}/>
