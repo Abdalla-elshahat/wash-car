@@ -1,6 +1,6 @@
 import "../Navbar/Navbar.css";
 import { useEffect, useState, useRef } from "react";
-import { Search, Bell, Menu, X, LogOut } from "lucide-react";
+import { Bell, Menu, X, LogOut } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Logout } from "../../apicalls/auth";
@@ -83,54 +83,11 @@ function Navbar() {
               <div className="flex-shrink-0 flex items-center">
                 <div className="text-indigo-600 font-bold text-2xl flex items-center">
                   <div className="logo font-aclonica tracking-wider ">
-                    <Link to={"/"}><img src="/لقطة شاشة 2025-07-26 184513.png" className="w-12 h-12" alt="Logo" /></Link>
+                    <Link to={"/"}><img src="/لقطة شاشة 2025-07-26 184513.png" className="h-12" alt="Logo" /></Link>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Search Bar - Desktop */}
-
-            {/* <div className=" flex items-center flex-1 max-w-md mx-4">
-              <div className="w-full">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-
-                  <input
-                    type="text"
-                    className=" block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-gray-50 focus:outline-none  focus:ring-1 focus:ring-[#3362C8] focus:border-[#3362C8] sm:text-sm"
-                    placeholder="Search..."
-                  value={search}
-                 onChange={(e) => setSearch(e.target.value)}
-                  />
-{search && (
-  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-    {filteredUsers.length > 0 ? (
-      filteredUsers.map((user) => (
-        <Link
-          key={user.id}
-          to={`/profileusers/${user.id}`}
-          className="flex items-center p-2 hover:bg-gray-100 transition-colors"
-          onClick={() => setSearch("")} // لإخفاء النتائج عند الضغط
-        >
-          <img
-            src={`${Domain}/${user.pictureUrl}` || "/default-profile.png"}
-            alt={user.displayname}
-            className="w-8 h-8 rounded-full object-cover mr-2"
-          />
-          <span className="text-sm">{user.displayname}</span>
-        </Link>
-      ))
-    ) : (
-      <div className="p-2 text-sm text-gray-500">No users found</div>
-    )}
-  </div>
-)}
-                </div>
-              </div>
-            </div> */}
 
             {/* Right side icons */}
             <div className="hidden md:flex items-center space-x-4">

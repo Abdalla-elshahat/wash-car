@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import Navbar from '../component/Navbar/Navbar';
 import { getLaundryById } from '../apicalls/laundry';
 import { createOrder, validateCoupon } from '../apicalls/order';
-import { Domain } from '../utels/const';
+import { Domain, formatTime12H } from '../utels/const';
 import {
   ArrowLeft,
   Phone,
@@ -467,7 +467,7 @@ function LaundryServices() {
                 )}
                 <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
                   <Clock size={12} className="text-indigo-300" />
-                  {laundry.workingHours?.from || "09:00"} - {laundry.workingHours?.to || "22:00"}
+                  {formatTime12H(laundry.workingHours?.from || "09:00")} - {formatTime12H(laundry.workingHours?.to || "22:00")}
                 </span>
               </div>
             </div>

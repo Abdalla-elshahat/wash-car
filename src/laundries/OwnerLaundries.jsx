@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import Navbar from "../component/Navbar/Navbar";
 import { getOwnerLaundries, createLaundry } from "../apicalls/laundry";
-import { Domain } from "../utels/const";
+import { Domain, formatTime12H } from "../utels/const";
+import MapPicker from "../component/MapPicker";
 import "./OwnerLaundries.css";
 
 /* ─── Status config ─── */
@@ -70,6 +71,7 @@ function AddLaundryModal({ onClose, onCreated }) {
   const [logoPreview, setLogoPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -107,8 +109,9 @@ function AddLaundryModal({ onClose, onCreated }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-row">
@@ -197,10 +200,35 @@ function AddLaundryModal({ onClose, onCreated }) {
 
           {/* Location */}
           <div className="form-group">
-            <label className="form-label">
-              <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
-              Location Coordinates
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>
+                <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
+                Location Coordinates
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowMap(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "5px 12px",
+                  backgroundColor: "#e0e7ff",
+                  border: "1px solid #c7d2fe",
+                  borderRadius: "8px",
+                  color: "#4338ca",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "background-color 0.2s",
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#c7d2fe"}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#e0e7ff"}
+              >
+                <MapPin size={12} />
+                اختر من الخريطة
+              </button>
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <input
@@ -277,6 +305,17 @@ function AddLaundryModal({ onClose, onCreated }) {
         </form>
       </div>
     </div>
+      {showMap && (
+        <MapPicker
+          initialLat={form.lat}
+          initialLng={form.lng}
+          onSelect={(lat, lng) => {
+            setForm((prev) => ({ ...prev, lat, lng }));
+          }}
+          onClose={() => setShowMap(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -333,7 +372,7 @@ function LaundryCard({ laundry }) {
           {laundry.workingHours?.from && (
             <div className="laundry-meta-row">
               <Clock size={15} className="meta-icon" />
-              <span>{laundry.workingHours.from} – {laundry.workingHours.to}</span>
+              <span>{formatTime12H(laundry.workingHours.from)} – {formatTime12H(laundry.workingHours.to)}</span>
             </div>
           )}
         </div>

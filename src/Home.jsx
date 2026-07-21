@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from './component/Navbar/Navbar';
 import { getAllLaundries } from './apicalls/laundry';
-import { Domain } from './utels/const';
+import { Domain, formatTime12H } from './utels/const';
 import {
   MapPin,
   Phone,
@@ -557,7 +557,7 @@ function Home() {
                           <div className="flex items-center gap-2">
                             <Clock size={14} className="text-indigo-500 flex-shrink-0" />
                             <span>
-                              {laundry.workingHours?.from || "09:00"} - {laundry.workingHours?.to || "22:00"}
+                              {formatTime12H(laundry.workingHours?.from || "09:00")} - {formatTime12H(laundry.workingHours?.to || "22:00")}
                             </span>
                           </div>
                         </div>

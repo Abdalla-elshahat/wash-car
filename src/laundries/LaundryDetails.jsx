@@ -26,7 +26,8 @@ import {
   updateCoupon,
   deleteCoupon
 } from "../apicalls/coupon";
-import { Domain } from "../utels/const";
+import { Domain, formatTime12H } from "../utels/const";
+import MapPicker from "../component/MapPicker";
 import "./LaundryDetails.css";
 
 /* ─── Helpers ─── */
@@ -134,6 +135,7 @@ function EditModal({ laundry, onClose, onUpdated }) {
   const [logoPreview, setLogoPreview] = useState(existingLogo);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -171,8 +173,9 @@ function EditModal({ laundry, onClose, onUpdated }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-row">
@@ -236,10 +239,35 @@ function EditModal({ laundry, onClose, onUpdated }) {
 
           {/* Coordinates */}
           <div className="form-group">
-            <label className="form-label">
-              <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
-              Location Coordinates
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>
+                <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
+                Location Coordinates
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowMap(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "5px 12px",
+                  backgroundColor: "#e0e7ff",
+                  border: "1px solid #c7d2fe",
+                  borderRadius: "8px",
+                  color: "#4338ca",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "background-color 0.2s",
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#c7d2fe"}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#e0e7ff"}
+              >
+                <MapPin size={12} />
+                اختر من الخريطة
+              </button>
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <input className="form-input" name="lat" value={form.lat}
@@ -288,6 +316,17 @@ function EditModal({ laundry, onClose, onUpdated }) {
         </form>
       </div>
     </div>
+      {showMap && (
+        <MapPicker
+          initialLat={form.lat}
+          initialLng={form.lng}
+          onSelect={(lat, lng) => {
+            setForm((prev) => ({ ...prev, lat, lng }));
+          }}
+          onClose={() => setShowMap(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -962,7 +1001,7 @@ export default function LaundryDetails() {
                 <Clock size={16} className="det-hours-icon" />
                 <div>
                   <p className="det-hours-label">Opens at</p>
-                  <p className="det-hours-time">{laundry.workingHours?.from ?? "—"}</p>
+                  <p className="det-hours-time">{formatTime12H(laundry.workingHours?.from)}</p>
                 </div>
               </div>
               <div className="det-hours-divider" />
@@ -970,7 +1009,7 @@ export default function LaundryDetails() {
                 <Clock size={16} className="det-hours-icon" />
                 <div>
                   <p className="det-hours-label">Closes at</p>
-                  <p className="det-hours-time">{laundry.workingHours?.to ?? "—"}</p>
+                  <p className="det-hours-time">{formatTime12H(laundry.workingHours?.to)}</p>
                 </div>
               </div>
             </div>
