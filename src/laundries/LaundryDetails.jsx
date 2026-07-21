@@ -1125,56 +1125,70 @@ export default function LaundryDetails() {
             </div>
 
             {/* Right Column: Write a Review Form */}
-            <div className="det-review-form-wrap">
-              <h3 className="det-review-form-title">Write a Review</h3>
-              <form onSubmit={handleSubmitReview} className="det-review-form">
-                {/* Rating Picker */}
-                <div className="det-rating-picker-group">
-                  <label className="form-label">Your Rating</label>
-                  <div className="det-rating-picker-stars">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <button
-                        type="button"
-                        key={s}
-                        onClick={() => setNewRating(s)}
-                        className="det-rating-picker-star-btn"
-                      >
-                        <Star
-                          size={24}
-                          className={s <= newRating ? "star-f fill-amber-400 text-amber-400" : "star-e text-gray-300"}
-                        />
-                      </button>
-                    ))}
+            {isLaundryOwner ? (
+              <div className="det-review-form-wrap" style={{ textAlign: 'center', backgroundColor: '#fffbeb', borderColor: '#fde68a', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                <ShieldAlert className="text-amber-500" size={36} />
+                <h3 className="det-review-form-title" style={{ margin: 0, color: '#92400e' }}>أنت مالك هذه المغسلة</h3>
+                <p style={{ fontSize: '0.85rem', color: '#b45309', margin: 0, lineHeight: 1.5 }}>
+                  بصفتك مالك المغسلة، لا يمكنك إضافة تقييم أو تعليق على عملك الخاص.
+                </p>
+                <div style={{ borderTop: '1px solid #fde68a', width: '100%', margin: '8px 0' }} />
+                <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 600 }}>
+                  You own this laundry. Self-reviews are disabled.
+                </span>
+              </div>
+            ) : (
+              <div className="det-review-form-wrap">
+                <h3 className="det-review-form-title">Write a Review</h3>
+                <form onSubmit={handleSubmitReview} className="det-review-form">
+                  {/* Rating Picker */}
+                  <div className="det-rating-picker-group">
+                    <label className="form-label">Your Rating</label>
+                    <div className="det-rating-picker-stars">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <button
+                          type="button"
+                          key={s}
+                          onClick={() => setNewRating(s)}
+                          className="det-rating-picker-star-btn"
+                        >
+                          <Star
+                            size={24}
+                            className={s <= newRating ? "star-f fill-amber-400 text-amber-400" : "star-e text-gray-300"}
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Comment Textarea */}
-                <div className="form-group">
-                  <label className="form-label">Your Comment</label>
-                  <textarea
-                    className="form-input form-textarea"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Share your experience with this center..."
-                    rows={4}
-                    required
-                  />
-                </div>
+                  {/* Comment Textarea */}
+                  <div className="form-group">
+                    <label className="form-label">Your Comment</label>
+                    <textarea
+                      className="form-input form-textarea"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Share your experience with this center..."
+                      rows={4}
+                      required
+                    />
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={submittingReview}
-                  className="btn-submit btn-edit w-full"
-                  style={{ marginTop: 8 }}
-                >
-                  {submittingReview ? (
-                    <><Loader2 size={16} className="det-spin animate-spin" /> Submitting...</>
-                  ) : (
-                    "Submit Review"
-                  )}
-                </button>
-              </form>
-            </div>
+                  <button
+                    type="submit"
+                    disabled={submittingReview}
+                    className="btn-submit btn-edit w-full"
+                    style={{ marginTop: 8 }}
+                  >
+                    {submittingReview ? (
+                      <><Loader2 size={16} className="det-spin animate-spin" /> Submitting...</>
+                    ) : (
+                      "Submit Review"
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>

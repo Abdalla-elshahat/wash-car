@@ -112,9 +112,17 @@ export async function deleteLaundry(id) {
   }
 }
 
-export async function getAllLaundries(page = 1, limit = 10) {
+export async function getAllLaundries(page = 1, limit = 10, filters = {}) {
   const token = Cookies.get("token");
-  const response = await fetch(`${Domain}/laundries?page=${page}&limit=${limit}`, {
+  const queryParams = new URLSearchParams({ page, limit });
+  
+  Object.entries(filters).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== "") {
+      queryParams.append(key, val);
+    }
+  });
+
+  const response = await fetch(`${Domain}/laundries?${queryParams.toString()}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

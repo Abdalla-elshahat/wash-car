@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getOrdersByLaundryId, updateOrderStatus } from "../apicalls/order";
 import { getOwnerLaundries } from "../apicalls/laundry";
-import { 
-  ShoppingBag, Filter, RefreshCw, ChevronLeft, ChevronRight, 
+import {
+  ShoppingBag, Filter, RefreshCw, ChevronLeft, ChevronRight,
   CheckCircle, Clock, XCircle, AlertTriangle, CreditCard, Tag, User, Phone, FileText, MapPin
 } from "lucide-react";
 import Swal from "sweetalert2";
@@ -19,7 +19,6 @@ const STATUS_OPTIONS = [
 
 const PAYMENT_METHODS = [
   { label: "All Payment Methods", value: "" },
-  { label: "Cash", value: "cash" },
   { label: "Card", value: "card" },
   { label: "Online", value: "online" },
   { label: "Stripe", value: "stripe" },
