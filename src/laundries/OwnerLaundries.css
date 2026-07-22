@@ -682,3 +682,83 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ══════════════════════════
+   Verification Documents Section
+══════════════════════════ */
+.doc-section-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 4px;
+}
+
+.doc-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.doc-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.doc-section-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.doc-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.doc-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-input-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.doc-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.doc-file-btn:hover {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.doc-file-btn.uploaded {
+  border-style: solid;
+  border-color: #059669;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+}
+

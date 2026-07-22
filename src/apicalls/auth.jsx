@@ -250,9 +250,9 @@ export async function Login(e, password, email, setError, setLoading, Setemail, 
       const res = await response.json();
       const data = res.data; // ✅ unwrap the nested data object
       Setemail(email);
-      Cookies.set("token", data.token);
-      Cookies.set("refreshToken", data.refreshToken);
-      Cookies.set("userId", data.user.id);
+      Cookies.set("token", data.token, { expires: 7, path: "/" });
+      Cookies.set("refreshToken", data.refreshToken, { expires: 7, path: "/" });
+      Cookies.set("userId", data.user.id, { expires: 7, path: "/" });
       localStorage.setItem("userRole", data.user.role);
       toast.success("Logged in successfully", { icon: <FaCheckCircle color="green" /> });
       setTimeout(() => {

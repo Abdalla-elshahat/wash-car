@@ -12,11 +12,15 @@ import {
   Store,
   Plus,
   X,
+  FileText,
+  FileCheck,
+  Upload,
 } from "lucide-react";
 import Navbar from "../component/Navbar/Navbar";
 import { getOwnerLaundries, createLaundry } from "../apicalls/laundry";
 import { Domain, formatTime12H } from "../utels/const";
 import MapPicker from "../component/MapPicker";
+import DocumentVerificationModal from "./DocumentVerificationModal";
 import "./OwnerLaundries.css";
 
 /* ─── Status config ─── */
@@ -64,11 +68,22 @@ const defaultForm = {
   workingTo: "22:00",
 };
 
+const ALLOWED_DOC_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB
+
 /* ─── Add Laundry Modal ─── */
 function AddLaundryModal({ onClose, onCreated }) {
   const [form, setForm] = useState(defaultForm);
   const [logoFile, setLogoFile]       = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+  
+  // 5 Required Documents
+  const [taxCard, setTaxCard] = useState(null);
+  const [commercialRegistration, setCommercialRegistration] = useState(null);
+  const [businessLicense, setBusinessLicense] = useState(null);
+  const [nationalIdFront, setNationalIdFront] = useState(null);
+  const [nationalIdBack, setNationalIdBack] = useState(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -84,9 +99,29 @@ function AddLaundryModal({ onClose, onCreated }) {
     setLogoPreview(URL.createObjectURL(file));
   }
 
+  function validateAndSetDoc(file, setter) {
+    if (!file) return;
+    if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+      setError("Invalid file format. Documents must be PDF, JPG, JPEG, or PNG.");
+      return;
+    }
+    if (file.size > MAX_DOC_SIZE) {
+      setError("File size exceeds 5MB limit.");
+      return;
+    }
+    setError("");
+    setter(file);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    if (!taxCard || !commercialRegistration || !businessLicense || !nationalIdFront || !nationalIdBack) {
+      setError("All 5 required legal verification documents must be uploaded before submitting.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -96,13 +131,18 @@ function AddLaundryModal({ onClose, onCreated }) {
         address: form.address,
         location: { type: "Point", coordinates: [parseFloat(form.lng), parseFloat(form.lat)] },
         workingHours: { from: form.workingFrom, to: form.workingTo },
-        logo: logoFile,  // File object — API function appends it to FormData
+        logo: logoFile,
+        taxCard,
+        commercialRegistration,
+        businessLicense,
+        nationalIdFront,
+        nationalIdBack,
       };
       const created = await createLaundry(payload);
       onCreated(created);
       onClose();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to create laundry");
     } finally {
       setSubmitting(false);
     }
@@ -111,14 +151,14 @@ function AddLaundryModal({ onClose, onCreated }) {
   return (
     <>
       <div className="modal-backdrop" onClick={onClose}>
-        <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-row">
             <div className="modal-icon-wrap">
               <Store size={20} />
             </div>
-            <h2 className="modal-title">Add New Laundry</h2>
+            <h2 className="modal-title">Add New Laundry Application</h2>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
             <X size={18} />
@@ -129,7 +169,7 @@ function AddLaundryModal({ onClose, onCreated }) {
         <form onSubmit={handleSubmit} className="modal-form">
           {/* Logo Upload */}
           <div className="form-group">
-            <label className="form-label">Logo</label>
+            <label className="form-label">Laundry Logo</label>
             <div className="logo-upload-row">
               {logoPreview ? (
                 <img src={logoPreview} alt="preview" className="logo-preview" />
@@ -287,6 +327,94 @@ function AddLaundryModal({ onClose, onCreated }) {
             </div>
           </div>
 
+          {/* ─── Verification Documents Section ─── */}
+          <div className="doc-section-card">
+            <div className="doc-section-header">
+              <FileCheck size={18} className="text-indigo-600" />
+              <div>
+                <h3 className="doc-section-title">Required Verification Documents <span className="required">*</span></h3>
+                <p className="doc-section-subtitle">PDF, JPG, JPEG or PNG (Max 5MB each)</p>
+              </div>
+            </div>
+
+            <div className="doc-inputs-grid">
+              {/* Tax Card */}
+              <div className="doc-input-box">
+                <label className="doc-input-label">Tax Card <span className="required">*</span></label>
+                <label className={`doc-file-btn ${taxCard ? "uploaded" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => validateAndSetDoc(e.target.files[0], setTaxCard)}
+                    hidden
+                  />
+                  <Upload size={14} />
+                  <span className="truncate">{taxCard ? taxCard.name : "Upload Tax Card"}</span>
+                </label>
+              </div>
+
+              {/* Commercial Registration */}
+              <div className="doc-input-box">
+                <label className="doc-input-label">Commercial Registration <span className="required">*</span></label>
+                <label className={`doc-file-btn ${commercialRegistration ? "uploaded" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => validateAndSetDoc(e.target.files[0], setCommercialRegistration)}
+                    hidden
+                  />
+                  <Upload size={14} />
+                  <span className="truncate">{commercialRegistration ? commercialRegistration.name : "Upload Commercial Reg."}</span>
+                </label>
+              </div>
+
+              {/* Business License */}
+              <div className="doc-input-box">
+                <label className="doc-input-label">Business License <span className="required">*</span></label>
+                <label className={`doc-file-btn ${businessLicense ? "uploaded" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => validateAndSetDoc(e.target.files[0], setBusinessLicense)}
+                    hidden
+                  />
+                  <Upload size={14} />
+                  <span className="truncate">{businessLicense ? businessLicense.name : "Upload License"}</span>
+                </label>
+              </div>
+
+              {/* National ID Front */}
+              <div className="doc-input-box">
+                <label className="doc-input-label">National ID (Front) <span className="required">*</span></label>
+                <label className={`doc-file-btn ${nationalIdFront ? "uploaded" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => validateAndSetDoc(e.target.files[0], setNationalIdFront)}
+                    hidden
+                  />
+                  <Upload size={14} />
+                  <span className="truncate">{nationalIdFront ? nationalIdFront.name : "Upload ID Front"}</span>
+                </label>
+              </div>
+
+              {/* National ID Back */}
+              <div className="doc-input-box sm:col-span-2">
+                <label className="doc-input-label">National ID (Back) <span className="required">*</span></label>
+                <label className={`doc-file-btn ${nationalIdBack ? "uploaded" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => validateAndSetDoc(e.target.files[0], setNationalIdBack)}
+                    hidden
+                  />
+                  <Upload size={14} />
+                  <span className="truncate">{nationalIdBack ? nationalIdBack.name : "Upload ID Back"}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           {error && <p className="form-error">{error}</p>}
 
           {/* Actions */}
@@ -296,9 +424,9 @@ function AddLaundryModal({ onClose, onCreated }) {
             </button>
             <button type="submit" className="btn-submit" disabled={submitting}>
               {submitting ? (
-                <><Loader2 size={16} className="spin" /> Creating…</>
+                <><Loader2 size={16} className="spin" /> Submitting Application…</>
               ) : (
-                <><Plus size={16} /> Create Laundry</>
+                <><Plus size={16} /> Submit Laundry Application</>
               )}
             </button>
           </div>
@@ -320,7 +448,7 @@ function AddLaundryModal({ onClose, onCreated }) {
 }
 
 /* ─── Laundry Card ─── */
-function LaundryCard({ laundry }) {
+function LaundryCard({ laundry, onOpenDocs }) {
   const status = statusConfig[laundry.status] ?? statusConfig.pending;
   const StatusIcon = status.icon;
   const logoUrl = getLaundryLogo(laundry.logo);
@@ -391,7 +519,16 @@ function LaundryCard({ laundry }) {
         </div>
       </div>
 
-      <div className="laundry-card-footer">
+      <div className="laundry-card-footer gap-2 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => onOpenDocs(laundry)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-semibold transition"
+        >
+          <FileText size={14} />
+          Verification Documents
+        </button>
+
         <Link to={`/laundries/${laundry._id}`} className="laundry-view-btn">
           View Details
         </Link>
@@ -406,27 +543,28 @@ export default function OwnerLaundries() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedLaundryDocs, setSelectedLaundryDocs] = useState(null);
+
+  const fetchLaundries = async () => {
+    try {
+      const data = await getOwnerLaundries();
+      setLaundries(data.map(parseLaundryFields));
+    } catch (err) {
+      setError("Failed to load your laundries. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await getOwnerLaundries();
-        setLaundries(data.map(parseLaundryFields));
-      } catch (err) {
-        setError("Failed to load your laundries. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    fetchLaundries();
   }, []);
 
   function handleCreated(newLaundry) {
     if (newLaundry && newLaundry._id) {
       setLaundries((prev) => [parseLaundryFields(newLaundry), ...prev]);
     } else {
-      // If server doesn't return the created object, refetch
-      getOwnerLaundries().then((data) => setLaundries(data.map(parseLaundryFields))).catch(() => {});
+      fetchLaundries();
     }
   }
 
@@ -480,19 +618,29 @@ export default function OwnerLaundries() {
         ) : (
           <div className="laundries-grid">
             {laundries.map((l) => (
-              <LaundryCard key={l._id} laundry={l} />
+              <LaundryCard key={l._id} laundry={l} onOpenDocs={(laundry) => setSelectedLaundryDocs(laundry)} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Modal */}
+      {/* Add Laundry Modal */}
       {showModal && (
         <AddLaundryModal
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
         />
       )}
+
+      {/* Document Verification Modal */}
+      {selectedLaundryDocs && (
+        <DocumentVerificationModal
+          laundry={selectedLaundryDocs}
+          onClose={() => setSelectedLaundryDocs(null)}
+          onUpdated={fetchLaundries}
+        />
+      )}
     </>
   );
 }
+

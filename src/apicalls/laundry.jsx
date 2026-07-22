@@ -34,6 +34,21 @@ export async function createLaundry(formData) {
   if (formData.logo instanceof File) {
     fd.append("logo", formData.logo);
   }
+  if (formData.taxCard instanceof File) {
+    fd.append("taxCard", formData.taxCard);
+  }
+  if (formData.commercialRegistration instanceof File) {
+    fd.append("commercialRegistration", formData.commercialRegistration);
+  }
+  if (formData.businessLicense instanceof File) {
+    fd.append("businessLicense", formData.businessLicense);
+  }
+  if (formData.nationalIdFront instanceof File) {
+    fd.append("nationalIdFront", formData.nationalIdFront);
+  }
+  if (formData.nationalIdBack instanceof File) {
+    fd.append("nationalIdBack", formData.nationalIdBack);
+  }
 
   const response = await fetch(`${Domain}/laundries`, {
     method: "POST",

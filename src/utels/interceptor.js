@@ -123,9 +123,9 @@ window.fetch = async function (url, options = {}) {
 };
 
 function handleLogout() {
-  Cookies.remove("token");
-  Cookies.remove("refreshToken");
-  Cookies.remove("userId");
+  Cookies.remove("token", { path: "/" });
+  Cookies.remove("refreshToken", { path: "/" });
+  Cookies.remove("userId", { path: "/" });
   if (
     !window.location.pathname.includes("/login") &&
     !window.location.pathname.includes("/signup")
