@@ -135,7 +135,7 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-100 pb-16 transition-colors duration-200">
         {/* Hero Section */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 text-white py-12 px-6 shadow-md">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
@@ -177,22 +177,22 @@ function Home() {
         <div className="max-w-7xl mx-auto px-6 mt-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <Store className="text-indigo-600" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Store className="text-indigo-600 dark:text-indigo-400" />
                 <span>All Car Wash Laundries</span>
               </h2>
-              <p className="text-sm text-gray-500 mt-1">Showing {laundries.length} of {total} registered wash centers</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Showing {laundries.length} of {total} registered wash centers</p>
             </div>
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border transition duration-200 shadow-sm ${
                 showFilters || Object.values(activeFilters).some(v => v !== undefined && v !== null && v !== '')
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100'
+                  : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700'
               }`}
             >
-              <Filter size={16} className={showFilters ? 'fill-indigo-600' : ''} />
+              <Filter size={16} className={showFilters ? 'fill-indigo-600 dark:fill-indigo-400' : ''} />
               <span>البحث والتصفية / Filters</span>
               {Object.entries(activeFilters).filter(([k, v]) => k !== 'maxDistance' && v !== undefined && v !== null && v !== '').length > 0 && (
                 <span className="flex items-center justify-center bg-indigo-600 text-white rounded-full text-xs h-5 w-5 font-bold">
@@ -204,11 +204,11 @@ function Home() {
 
           {/* Collapsible Filter Panel */}
           {showFilters && (
-            <form onSubmit={handleApplyFilters} className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 shadow-sm transition-all duration-300">
-              <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-150">
+            <form onSubmit={handleApplyFilters} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 mb-8 shadow-sm transition-all duration-300">
+              <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-150 dark:border-slate-700">
                 <div className="flex items-center gap-2">
-                  <Filter size={18} className="text-indigo-600" />
-                  <h3 className="font-bold text-gray-900 text-lg">البحث والتصفية / Search & Filter</h3>
+                  <Filter size={18} className="text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="font-bold text-gray-900 dark:text-white text-lg">البحث والتصفية / Search & Filter</h3>
                 </div>
                 <button
                   type="button"
@@ -482,10 +482,10 @@ function Home() {
               <p className="text-sm">{error}</p>
             </div>
           ) : laundries.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-150 p-12 text-center max-w-lg mx-auto shadow-sm">
-              <Store className="mx-auto text-gray-300 mb-4" size={56} />
-              <h3 className="text-lg font-bold text-gray-800">No Laundries Found</h3>
-              <p className="text-gray-500 text-sm mt-1">We couldn't find any registered laundries in our database.</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-150 dark:border-slate-700 p-12 text-center max-w-lg mx-auto shadow-sm">
+              <Store className="mx-auto text-gray-300 dark:text-slate-600 mb-4" size={56} />
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white">No Laundries Found</h3>
+              <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">We couldn't find any registered laundries in our database.</p>
             </div>
           ) : (
             <>
@@ -498,20 +498,20 @@ function Home() {
                   return (
                     <div
                       key={laundry._id}
-                      className="bg-white rounded-2xl border border-gray-150 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group hover:-translate-y-1"
+                      className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-150 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group hover:-translate-y-1"
                     >
                       {/* Card Header with Logo/Image & Status */}
                       <div className="p-6 pb-0 flex items-start justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200">
+                          <div className="h-14 w-14 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 border border-gray-200 dark:border-slate-600">
                             {logoUrl ? (
                               <img src={logoUrl} alt={laundry.name} className="h-full w-full object-cover" />
                             ) : (
-                              <Store className="text-indigo-600" size={26} />
+                              <Store className="text-indigo-600 dark:text-indigo-400" size={26} />
                             )}
                           </div>
                           <div>
-                            <h3 className="font-bold text-gray-900 group-hover:text-indigo-600 transition duration-150 line-clamp-1">
+                            <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition duration-150 line-clamp-1">
                               {laundry.name}
                             </h3>
                             <div className="flex items-center gap-1.5 mt-1">
@@ -520,20 +520,20 @@ function Home() {
                                   <Star
                                     key={star}
                                     size={12}
-                                    className={star <= Math.round(laundry.rating || 0) ? "fill-amber-400" : "text-gray-200"}
+                                    className={star <= Math.round(laundry.rating || 0) ? "fill-amber-400" : "text-gray-200 dark:text-slate-600"}
                                   />
                                 ))}
                               </div>
-                              <span className="text-xs text-gray-500 font-semibold">({laundry.totalReviews || 0})</span>
+                              <span className="text-xs text-gray-500 dark:text-slate-400 font-semibold">({laundry.totalReviews || 0})</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Status tag */}
                         <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${laundry.status === 'approved'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-150'
-                          : 'bg-amber-50 text-amber-700 border border-amber-150'
-                          }`}>
+                          ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-150 dark:border-emerald-500/30'
+                          : 'bg-amber-50 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-150 dark:border-amber-500/30'
+                        }`}>
                           {laundry.status || 'pending'}
                         </span>
                       </div>

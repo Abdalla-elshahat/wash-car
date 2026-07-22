@@ -1,6 +1,6 @@
 import "../Navbar/Navbar.css";
 import { useEffect, useState, useRef } from "react";
-import { Bell, Menu, X, LogOut } from "lucide-react";
+import { Bell, Menu, X, LogOut, LayoutDashboard, Sun, Moon } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import { Logout } from "../../apicalls/auth";
@@ -21,6 +21,23 @@ function Navbar() {
   const [users, setUsers] = useState([]);
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || (document.documentElement.classList.contains("dark") ? "dark" : "light");
+  });
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -74,7 +91,7 @@ function Navbar() {
   return (
     <div className=" bg-gray-100 dark:bg-gray-900">
       <ToastContainer />
-      <nav className="bg-white shadow-md md:mb-1">
+      <nav className="bg-white dark:bg-gray-800 shadow-md">
         <div className=" mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             {/* Logo and Desktop Navigation */}
@@ -136,43 +153,77 @@ function Navbar() {
                         src={getProfileImageUrl(userPicture)}
                         alt="User profile"
                       />
-                      <span className="text-sm font-semibold text-gray-700 select-none">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
                         {userName || "My Account"}
                       </span>
                     </button>
 
                     {isProfileDropdownOpen && (
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-150 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-150 dark:border-gray-700 py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                         <Link
                           to="/profile"
                           onClick={() => setIsProfileDropdownOpen(false)}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50/55 transition font-semibold"
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition font-semibold"
                         >
                           👤 Profile
                         </Link>
-                        <hr className="my-1 border-gray-100" />
+                        {userRole?.toLowerCase() === "admin" && (
+                          <Link
+                            to="/admin/dashboard"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/70 dark:hover:bg-gray-700 transition font-bold"
+                          >
+                            <LayoutDashboard size={16} /> <span>Admin Dashboard</span>
+                          </Link>
+                        )}
+                        <hr className="my-1 border-gray-100 dark:border-gray-700" />
+                        <button
+                          onClick={toggleTheme}
+                          className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition font-semibold cursor-pointer"
+                        >
+                          {theme === "dark" ? (
+                            <Sun size={18} className="text-amber-500" />
+                          ) : (
+                            <Moon size={18} className="text-indigo-600" />
+                          )}
+                          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                        </button>
+                        <hr className="my-1 border-gray-100 dark:border-gray-700" />
                         <button
                           onClick={(e) => {
                             setIsProfileDropdownOpen(false);
-                            Logout(e, setError, setLoading, navigate);
+                            Logout(e, () => {}, () => {}, navigate);
                           }}
                           style={{ display: 'flex', alignItems: 'center' }}
-                          className="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition font-semibold"
+                          className="w-full text-left block px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition font-semibold cursor-pointer"
                         >
-                          <LogOut /> <span className="pl-2">Logout</span>
+                          <LogOut size={18} /> <span className="pl-2">Logout</span>
                         </button>
                       </div>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="auth-buttons">
-                  <button className="login-btn py-[4px] px-[18px]">
-                    <Link to={"/login"}>Log in</Link>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={toggleTheme}
+                    className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white focus:outline-none transition cursor-pointer"
+                    title="Toggle Dark/Light Mode"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-indigo-600" />
+                    )}
                   </button>
-                  <button className="signup-btn py-[4px] px-[18px]">
-                    <Link to={"/signup"}>Sign Up</Link>
-                  </button>
+                  <div className="auth-buttons">
+                    <button className="login-btn py-[4px] px-[18px]">
+                      <Link to={"/login"}>Log in</Link>
+                    </button>
+                    <button className="signup-btn py-[4px] px-[18px]">
+                      <Link to={"/signup"}>Sign Up</Link>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -238,7 +289,7 @@ function Navbar() {
                 <Link
                   to="/profile"
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition duration-200"
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 transition duration-200"
                 >
                   <img
                     className="h-12 w-12 rounded-full object-cover border-2 border-indigo-500"
@@ -246,8 +297,8 @@ function Navbar() {
                     alt="User profile"
                   />
                   <div className="overflow-hidden">
-                    <div className="text-base font-bold text-gray-800 truncate">{userName}</div>
-                    <div className="text-xs text-gray-500 truncate">{userEmail}</div>
+                    <div className="text-base font-bold text-gray-800 dark:text-gray-100 truncate">{userName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{userEmail}</div>
                   </div>
                 </Link>
 
@@ -256,14 +307,24 @@ function Navbar() {
                   <Link
                     to="/profile"
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-indigo-50/50 transition"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50/50 dark:hover:bg-gray-700 transition"
                   >
                     <span>👤</span> Profile
                   </Link>
 
+                  {userRole?.toLowerCase() === "admin" && (
+                    <Link
+                      to="/admin/dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/70 dark:hover:bg-gray-700 transition"
+                    >
+                      <LayoutDashboard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> Admin Dashboard
+                    </Link>
+                  )}
+
                   <button
                     onClick={() => setNotifications(!notifications)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-indigo-50/55 transition text-left focus:outline-none"
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition text-left focus:outline-none"
                   >
                     <span className="flex items-center gap-3">
                       <Bell className="w-4 h-4 text-gray-500" /> Notifications
@@ -271,18 +332,42 @@ function Navbar() {
                   </button>
 
                   <button
+                    onClick={toggleTheme}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition text-left focus:outline-none cursor-pointer"
+                  >
+                    {theme === "dark" ? (
+                      <Sun className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Moon className="w-4 h-4 text-indigo-600" />
+                    )}
+                    <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                  </button>
+
+                  <button
                     onClick={(e) => {
                       setIsMenuOpen(false);
-                      Logout(e, setError, setLoading, navigate);
+                      Logout(e, () => {}, () => {}, navigate);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition text-left focus:outline-none"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition text-left focus:outline-none cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" /> Logout
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="px-4">
+              <div className="px-4 space-y-3">
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition text-left focus:outline-none cursor-pointer"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-indigo-600" />
+                  )}
+                  <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                </button>
+
                 <div className="auth-buttons flex flex-col gap-2">
                   <Link to="/login" onClick={() => setIsMenuOpen(false)} className="w-full">
                     <button className="login-btn w-full py-2.5 font-bold text-sm rounded-xl">Log in</button>

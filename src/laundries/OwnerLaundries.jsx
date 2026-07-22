@@ -15,6 +15,9 @@ import {
   FileText,
   FileCheck,
   Upload,
+  Pencil,
+  Eye,
+  Download,
 } from "lucide-react";
 import Navbar from "../component/Navbar/Navbar";
 import { getOwnerLaundries, createLaundry } from "../apicalls/laundry";
@@ -25,9 +28,9 @@ import "./OwnerLaundries.css";
 
 /* ─── Status config ─── */
 const statusConfig = {
-  pending:  { label: "Pending",  icon: AlertCircle, className: "status-pending"  },
+  pending: { label: "Pending", icon: AlertCircle, className: "status-pending" },
   approved: { label: "Approved", icon: CheckCircle, className: "status-approved" },
-  rejected: { label: "Rejected", icon: XCircle,     className: "status-rejected" },
+  rejected: { label: "Rejected", icon: XCircle, className: "status-rejected" },
 };
 
 function getLaundryLogo(logo) {
@@ -74,9 +77,9 @@ const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB
 /* ─── Add Laundry Modal ─── */
 function AddLaundryModal({ onClose, onCreated }) {
   const [form, setForm] = useState(defaultForm);
-  const [logoFile, setLogoFile]       = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
-  
+
   // 5 Required Documents
   const [taxCard, setTaxCard] = useState(null);
   const [commercialRegistration, setCommercialRegistration] = useState(null);
@@ -87,6 +90,15 @@ function AddLaundryModal({ onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showMap, setShowMap] = useState(false);
+  const [previewModal, setPreviewModal] = useState(null);
+
+  const handlePreviewLocalFile = (file, title) => {
+    if (!file) return;
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    const url = URL.createObjectURL(file);
+    setPreviewModal({ title, url, isImage, isPdf, name: file.name });
+  };
 
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -152,287 +164,274 @@ function AddLaundryModal({ onClose, onCreated }) {
     <>
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header">
-          <div className="modal-title-row">
-            <div className="modal-icon-wrap">
-              <Store size={20} />
+          {/* Header */}
+          <div className="modal-header">
+            <div className="modal-title-row">
+              <div className="modal-icon-wrap">
+                <Store size={20} />
+              </div>
+              <h2 className="modal-title">Add New Laundry Application</h2>
             </div>
-            <h2 className="modal-title">Add New Laundry Application</h2>
-          </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="modal-form">
-          {/* Logo Upload */}
-          <div className="form-group">
-            <label className="form-label">Laundry Logo</label>
-            <div className="logo-upload-row">
-              {logoPreview ? (
-                <img src={logoPreview} alt="preview" className="logo-preview" />
-              ) : (
-                <div className="logo-preview-placeholder"><Store size={22} /></div>
-              )}
-              <label className="logo-upload-btn">
-                <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
-                {logoFile ? "Change Image" : "Choose Image"}
-              </label>
-              {logoFile && (
-                <span className="logo-filename">{logoFile.name}</span>
-              )}
-            </div>
+            <button className="modal-close-btn" onClick={onClose}>
+              <X size={18} />
+            </button>
           </div>
 
-          {/* Name */}
-          <div className="form-group">
-            <label className="form-label">Laundry Name <span className="required">*</span></label>
-            <input
-              className="form-input"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="e.g. Clean Car Wash"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea
-              className="form-input form-textarea"
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              placeholder="Brief description of your service…"
-              rows={3}
-            />
-          </div>
-
-          {/* Phone + Address */}
-          <div className="form-row">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="modal-form">
+            {/* Logo Upload */}
             <div className="form-group">
-              <label className="form-label">Phone <span className="required">*</span></label>
+              <label className="form-label">Laundry Logo</label>
+              <div className="logo-upload-row">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="preview" className="logo-preview" />
+                ) : (
+                  <div className="logo-preview-placeholder"><Store size={22} /></div>
+                )}
+                <label className="logo-upload-btn">
+                  <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
+                  {logoFile ? "Change Image" : "Choose Image"}
+                </label>
+                {logoFile && (
+                  <span className="logo-filename">{logoFile.name}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="form-group">
+              <label className="form-label">Laundry Name <span className="required">*</span></label>
               <input
                 className="form-input"
-                name="phone"
-                value={form.phone}
+                name="name"
+                value={form.name}
                 onChange={handleChange}
-                placeholder="01000000000"
+                placeholder="e.g. Clean Car Wash"
                 required
               />
             </div>
+
+            {/* Description */}
             <div className="form-group">
-              <label className="form-label">Address <span className="required">*</span></label>
-              <input
-                className="form-input"
-                name="address"
-                value={form.address}
+              <label className="form-label">Description</label>
+              <textarea
+                className="form-input form-textarea"
+                name="description"
+                value={form.description}
                 onChange={handleChange}
-                placeholder="Cairo, Egypt"
-                required
+                placeholder="Brief description of your service…"
+                rows={3}
               />
             </div>
-          </div>
 
-          {/* Location */}
-          <div className="form-group">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <label className="form-label" style={{ marginBottom: 0 }}>
-                <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
-                Location Coordinates
+            {/* Phone + Address */}
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Phone <span className="required">*</span></label>
+                <input
+                  className="form-input"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="01000000000"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Address <span className="required">*</span></label>
+                <input
+                  className="form-input"
+                  name="address"
+                  value={form.address}
+                  onChange={handleChange}
+                  placeholder="Cairo, Egypt"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="form-group">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  <MapPin size={13} style={{ display: "inline", marginRight: 4 }} />
+                  Location Coordinates
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowMap(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "5px 12px",
+                    backgroundColor: "#e0e7ff",
+                    border: "1px solid #c7d2fe",
+                    borderRadius: "8px",
+                    color: "#4338ca",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "background-color 0.2s",
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#c7d2fe"}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#e0e7ff"}
+                >
+                  <MapPin size={12} />
+                  اختر من الخريطة
+                </button>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <input
+                    className="form-input"
+                    name="lat"
+                    value={form.lat}
+                    onChange={handleChange}
+                    placeholder="Latitude e.g. 30.0444"
+                    type="number"
+                    step="any"
+                  />
+                  <span className="form-hint">Latitude</span>
+                </div>
+                <div className="form-group">
+                  <input
+                    className="form-input"
+                    name="lng"
+                    value={form.lng}
+                    onChange={handleChange}
+                    placeholder="Longitude e.g. 31.2357"
+                    type="number"
+                    step="any"
+                  />
+                  <span className="form-hint">Longitude</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Working Hours */}
+            <div className="form-group">
+              <label className="form-label">
+                <Clock size={13} style={{ display: "inline", marginRight: 4 }} />
+                Working Hours
               </label>
-              <button
-                type="button"
-                onClick={() => setShowMap(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "5px 12px",
-                  backgroundColor: "#e0e7ff",
-                  border: "1px solid #c7d2fe",
-                  borderRadius: "8px",
-                  color: "#4338ca",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "background-color 0.2s",
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#c7d2fe"}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#e0e7ff"}
-              >
-                <MapPin size={12} />
-                اختر من الخريطة
+              <div className="form-row">
+                <div className="form-group">
+                  <input
+                    className="form-input"
+                    type="time"
+                    name="workingFrom"
+                    value={form.workingFrom}
+                    onChange={handleChange}
+                  />
+                  <span className="form-hint">Opens at</span>
+                </div>
+                <div className="form-group">
+                  <input
+                    className="form-input"
+                    type="time"
+                    name="workingTo"
+                    value={form.workingTo}
+                    onChange={handleChange}
+                  />
+                  <span className="form-hint">Closes at</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ─── Verification Documents Section ─── */}
+            <div className="doc-section-card">
+              <div className="doc-section-header">
+                <FileCheck size={18} className="text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <h3 className="doc-section-title">Required Verification Documents <span className="required">*</span></h3>
+                  <p className="doc-section-subtitle">PDF, JPG, JPEG or PNG (Max 5MB each)</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 mt-4">
+                {[
+                  { label: "Tax Card", file: taxCard, setter: setTaxCard },
+                  { label: "Commercial Registration", file: commercialRegistration, setter: setCommercialRegistration },
+                  { label: "Business License", file: businessLicense, setter: setBusinessLicense },
+                  { label: "National ID (Front)", file: nationalIdFront, setter: setNationalIdFront },
+                  { label: "National ID (Back)", file: nationalIdBack, setter: setNationalIdBack },
+                ].map((docItem, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{docItem.label} <span className="required">*</span></span>
+                        {docItem.file && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
+                            <CheckCircle size={13} /> Uploaded
+                          </span>
+                        )}
+                      </div>
+                      {docItem.file ? (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-xs mt-1 font-mono">{docItem.file.name}</p>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Not uploaded yet</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+                      {docItem.file ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewLocalFile(docItem.file, docItem.label)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                          >
+                            <Eye size={14} /> View
+                          </button>
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold transition shadow-sm">
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => validateAndSetDoc(e.target.files[0], docItem.setter)}
+                              hidden
+                            />
+                            <Pencil size={14} /> Edit
+                          </label>
+                        </>
+                      ) : (
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => validateAndSetDoc(e.target.files[0], docItem.setter)}
+                            hidden
+                          />
+                          <Upload size={14} /> Upload
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {error && <p className="form-error">{error}</p>}
+
+            {/* Actions */}
+            <div className="modal-actions">
+              <button type="button" className="btn-cancel" onClick={onClose}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-submit" disabled={submitting}>
+                {submitting ? (
+                  <><Loader2 size={16} className="spin" /> Submitting Application…</>
+                ) : (
+                  <><Plus size={16} /> Submit Laundry Application</>
+                )}
               </button>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <input
-                  className="form-input"
-                  name="lat"
-                  value={form.lat}
-                  onChange={handleChange}
-                  placeholder="Latitude e.g. 30.0444"
-                  type="number"
-                  step="any"
-                />
-                <span className="form-hint">Latitude</span>
-              </div>
-              <div className="form-group">
-                <input
-                  className="form-input"
-                  name="lng"
-                  value={form.lng}
-                  onChange={handleChange}
-                  placeholder="Longitude e.g. 31.2357"
-                  type="number"
-                  step="any"
-                />
-                <span className="form-hint">Longitude</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Working Hours */}
-          <div className="form-group">
-            <label className="form-label">
-              <Clock size={13} style={{ display: "inline", marginRight: 4 }} />
-              Working Hours
-            </label>
-            <div className="form-row">
-              <div className="form-group">
-                <input
-                  className="form-input"
-                  type="time"
-                  name="workingFrom"
-                  value={form.workingFrom}
-                  onChange={handleChange}
-                />
-                <span className="form-hint">Opens at</span>
-              </div>
-              <div className="form-group">
-                <input
-                  className="form-input"
-                  type="time"
-                  name="workingTo"
-                  value={form.workingTo}
-                  onChange={handleChange}
-                />
-                <span className="form-hint">Closes at</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ─── Verification Documents Section ─── */}
-          <div className="doc-section-card">
-            <div className="doc-section-header">
-              <FileCheck size={18} className="text-indigo-600" />
-              <div>
-                <h3 className="doc-section-title">Required Verification Documents <span className="required">*</span></h3>
-                <p className="doc-section-subtitle">PDF, JPG, JPEG or PNG (Max 5MB each)</p>
-              </div>
-            </div>
-
-            <div className="doc-inputs-grid">
-              {/* Tax Card */}
-              <div className="doc-input-box">
-                <label className="doc-input-label">Tax Card <span className="required">*</span></label>
-                <label className={`doc-file-btn ${taxCard ? "uploaded" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => validateAndSetDoc(e.target.files[0], setTaxCard)}
-                    hidden
-                  />
-                  <Upload size={14} />
-                  <span className="truncate">{taxCard ? taxCard.name : "Upload Tax Card"}</span>
-                </label>
-              </div>
-
-              {/* Commercial Registration */}
-              <div className="doc-input-box">
-                <label className="doc-input-label">Commercial Registration <span className="required">*</span></label>
-                <label className={`doc-file-btn ${commercialRegistration ? "uploaded" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => validateAndSetDoc(e.target.files[0], setCommercialRegistration)}
-                    hidden
-                  />
-                  <Upload size={14} />
-                  <span className="truncate">{commercialRegistration ? commercialRegistration.name : "Upload Commercial Reg."}</span>
-                </label>
-              </div>
-
-              {/* Business License */}
-              <div className="doc-input-box">
-                <label className="doc-input-label">Business License <span className="required">*</span></label>
-                <label className={`doc-file-btn ${businessLicense ? "uploaded" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => validateAndSetDoc(e.target.files[0], setBusinessLicense)}
-                    hidden
-                  />
-                  <Upload size={14} />
-                  <span className="truncate">{businessLicense ? businessLicense.name : "Upload License"}</span>
-                </label>
-              </div>
-
-              {/* National ID Front */}
-              <div className="doc-input-box">
-                <label className="doc-input-label">National ID (Front) <span className="required">*</span></label>
-                <label className={`doc-file-btn ${nationalIdFront ? "uploaded" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => validateAndSetDoc(e.target.files[0], setNationalIdFront)}
-                    hidden
-                  />
-                  <Upload size={14} />
-                  <span className="truncate">{nationalIdFront ? nationalIdFront.name : "Upload ID Front"}</span>
-                </label>
-              </div>
-
-              {/* National ID Back */}
-              <div className="doc-input-box sm:col-span-2">
-                <label className="doc-input-label">National ID (Back) <span className="required">*</span></label>
-                <label className={`doc-file-btn ${nationalIdBack ? "uploaded" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => validateAndSetDoc(e.target.files[0], setNationalIdBack)}
-                    hidden
-                  />
-                  <Upload size={14} />
-                  <span className="truncate">{nationalIdBack ? nationalIdBack.name : "Upload ID Back"}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {error && <p className="form-error">{error}</p>}
-
-          {/* Actions */}
-          <div className="modal-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-submit" disabled={submitting}>
-              {submitting ? (
-                <><Loader2 size={16} className="spin" /> Submitting Application…</>
-              ) : (
-                <><Plus size={16} /> Submit Laundry Application</>
-              )}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
       {showMap && (
         <MapPicker
           initialLat={form.lat}
@@ -442,6 +441,61 @@ function AddLaundryModal({ onClose, onCreated }) {
           }}
           onClose={() => setShowMap(false)}
         />
+      )}
+
+      {/* Image / Document Preview Popup Modal */}
+      {previewModal && (
+        <div
+          style={{ zIndex: 100000 }}
+          className="fixed inset-0 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPreviewModal(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90">
+              <div className="flex items-center gap-2">
+                <Eye className="text-indigo-600 dark:text-indigo-400" size={20} />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">{previewModal.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 flex-1 overflow-auto flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 min-h-[320px]">
+              {previewModal.isImage ? (
+                <img
+                  src={previewModal.url}
+                  alt={previewModal.title}
+                  className="max-h-[70vh] w-auto max-w-full rounded-xl object-contain shadow-md"
+                />
+              ) : previewModal.isPdf ? (
+                <iframe
+                  src={previewModal.url}
+                  title={previewModal.title}
+                  className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-slate-700"
+                />
+              ) : (
+                <div className="text-center p-8">
+                  <FileText size={48} className="mx-auto text-slate-400 mb-3" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">{previewModal.name}</p>
+                  <a
+                    href={previewModal.url}
+                    download={previewModal.name}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 inline-flex items-center gap-2"
+                  >
+                    <Download size={14} /> Open / Download Document
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
