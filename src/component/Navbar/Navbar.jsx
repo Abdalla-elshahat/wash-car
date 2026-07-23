@@ -2,10 +2,14 @@ import "../Navbar/Navbar.css";
 import { useEffect, useState, useRef } from "react";
 import { Bell, Menu, X, LogOut, LayoutDashboard, Sun, Moon } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import { Logout } from "../../apicalls/auth";
 import Cookies from "js-cookie";
 import { Domain } from "../../utels/const";
+import { io } from "socket.io-client";
+import { getMyNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../../apicalls/notifications";
+import NotificationDropdown from "./NotificationDropdown";
+import NotificationPreferencesModal from "./NotificationPreferencesModal";
 function Navbar() {
   const token = Cookies.get("token");
   const [userRole, setUserRole] = useState(localStorage.getItem("userRole") || "");
@@ -15,10 +19,18 @@ function Navbar() {
   const [loading, setLoading] = useState(false);
   const [userName, setUserName] = useState("")
   const [userPicture, setUserPicture] = useState("")
-  const [userEmail, setUserEmail] = useState("")
-  const [notifications, setNotifications] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [notificationList, setNotificationList] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [activeNotifTab, setActiveNotifTab] = useState("all");
+  const [notifPage, setNotifPage] = useState(1);
+  const [notifHasMore, setNotifHasMore] = useState(false);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
+  const notifRef = useRef(null);
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -47,6 +59,9 @@ function Navbar() {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -82,6 +97,127 @@ function Navbar() {
     }
     fetchUserProfile();
   }, [token]);
+
+  // Request HTML5 Browser Push Notification Permission
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch((err) => console.log("Push notification permission prompt error:", err));
+    }
+  }, []);
+
+  // Fetch notifications according to tab & page
+  const loadNotifications = async (page = 1, type = activeNotifTab, append = false) => {
+    setLoadingNotifications(true);
+    try {
+      const res = await getMyNotifications({ page, limit: 10, type });
+      if (res) {
+        const list = res.data || (Array.isArray(res) ? res : []);
+        setNotificationList((prev) => (append ? [...prev, ...list] : list));
+        setNotifHasMore(res.page < res.totalPages);
+        if (res.unreadCount !== undefined) {
+          setTotalUnreadCount(res.unreadCount);
+        } else {
+          setTotalUnreadCount(list.filter((n) => !n.isRead).length);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    loadNotifications(1, activeNotifTab, false);
+  }, [token, activeNotifTab]);
+
+  // Real-time socket notification listener
+  useEffect(() => {
+    if (!token) return;
+
+    const socket = io(Domain, {
+      auth: { token },
+      query: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      console.log("Real-time notification socket connected.");
+    });
+
+    socket.on("notification", (newNotif) => {
+      setNotificationList((prev) => [newNotif, ...prev]);
+      setTotalUnreadCount((prev) => prev + 1);
+
+      // Toast alert
+      toast.info(
+        <div>
+          <p className="font-bold text-sm">{newNotif.title}</p>
+          <p className="text-xs">{newNotif.message}</p>
+        </div>,
+        {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        }
+      );
+
+      // HTML5 Native Browser Push Notification
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification(newNotif.title || "Notification", {
+            body: newNotif.message,
+            icon: "/لقطة شاشة 2025-07-26 184513.png",
+          });
+        } catch (e) {
+          console.error("Native push error:", e);
+        }
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [token]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotificationList((prev) =>
+        prev.map((n) => ((n._id || n.id) === id ? { ...n, isRead: true } : n))
+      );
+      setTotalUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setNotificationList((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setTotalUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveNotifTab(tabId);
+    setNotifPage(1);
+  };
+
+  const handleLoadMore = () => {
+    const nextPage = notifPage + 1;
+    setNotifPage(nextPage);
+    loadNotifications(nextPage, activeNotifTab, true);
+  };
+
+  const unreadCount = totalUnreadCount;
 
   // تصفية المستخدمين بناءً على البحث
   const filteredUsers = users.filter((user) =>
@@ -136,11 +272,33 @@ function Navbar() {
                       🚫 Inactive Laundries
                     </NavLink>
                   )}
-                  <div className="relative"> {/* جعل العنصر الأب نسبيًا */}
-                    <button onClick={() => setNotifications(!notifications)} className="p-1 rounded-full  text-gray-500 hover:text-gray-700 focus:outline-none relative">
+                  <div className="relative" ref={notifRef}>
+                    <button
+                      onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                      className="p-1 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white focus:outline-none relative transition"
+                      title="Notifications"
+                    >
                       <Bell className="h-6 w-6" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md animate-pulse">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
                     </button>
-                    {/* {notifications && <Notification />} */}
+                    {isNotificationOpen && (
+                      <NotificationDropdown
+                        notifications={notificationList}
+                        loading={loadingNotifications}
+                        activeTab={activeNotifTab}
+                        onTabChange={handleTabChange}
+                        onMarkAsRead={handleMarkAsRead}
+                        onMarkAllAsRead={handleMarkAllAsRead}
+                        onOpenPreferences={() => setIsPreferencesOpen(true)}
+                        onLoadMore={handleLoadMore}
+                        hasMore={notifHasMore}
+                        onClose={() => setIsNotificationOpen(false)}
+                      />
+                    )}
                   </div>
                   <div className="relative flex items-center" ref={dropdownRef}>
                     <button
@@ -323,12 +481,17 @@ function Navbar() {
                   )}
 
                   <button
-                    onClick={() => setNotifications(!notifications)}
+                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                     className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-indigo-50/55 dark:hover:bg-gray-700 transition text-left focus:outline-none"
                   >
                     <span className="flex items-center gap-3">
                       <Bell className="w-4 h-4 text-gray-500" /> Notifications
                     </span>
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-xs font-bold">
+                        {unreadCount}
+                      </span>
+                    )}
                   </button>
 
                   <button
@@ -381,6 +544,12 @@ function Navbar() {
           </div>
         </div>
       </nav>
+
+      {/* Notification Preferences Settings Modal */}
+      <NotificationPreferencesModal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+      />
     </div>
   );
 }
