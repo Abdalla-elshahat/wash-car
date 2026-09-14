@@ -122,14 +122,18 @@ function Home() {
     }));
   };
 
-  const getLogoUrl = (logo) => {
-    if (!logo) return null;
-    if (logo.startsWith('http')) return logo;
-    return `${Domain}/uploads/laundries/${logo}`;
+  const getLogoUrl = (laundry) => {
+    if (!laundry) return null;
+    if (laundry.logoUrl) return laundry.logoUrl;
+    if (!laundry.logo) return null;
+    if (laundry.logo.startsWith('http')) return laundry.logo;
+    return `${Domain}/uploads/laundries/${laundry.logo}`;
   };
 
   const getOwnerAvatar = (owner) => {
-    if (!owner || !owner.profileImage) return 'https://www.w3schools.com/howto/img_avatar.png';
+    if (!owner) return 'https://www.w3schools.com/howto/img_avatar.png';
+    if (owner.profileImageUrl) return owner.profileImageUrl;
+    if (!owner.profileImage) return 'https://www.w3schools.com/howto/img_avatar.png';
     if (owner.profileImage.startsWith('http')) return owner.profileImage;
     return `${Domain}/uploads/users/${owner.profileImage}`;
   };
@@ -492,7 +496,7 @@ function Home() {
               {/* Laundries Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {laundries.map((laundry) => {
-                  const logoUrl = getLogoUrl(laundry.logo);
+                  const logoUrl = getLogoUrl(laundry);
                   const owner = laundry.ownerId || {};
 
                   return (

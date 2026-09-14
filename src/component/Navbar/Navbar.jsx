@@ -87,7 +87,7 @@ function Navbar() {
           const data = await response.json();
           setUserName(data.fullname || "");
           setUserEmail(data.email || "");
-          setUserPicture(data.profileImage || "");
+          setUserPicture(data.profileImageUrl || data.profileImage || "");
           setUserRole(data.role || "");
           localStorage.setItem("userRole", data.role || "");
         }

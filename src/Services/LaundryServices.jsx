@@ -5,6 +5,8 @@ import Swal from 'sweetalert2';
 import Navbar from '../component/Navbar/Navbar';
 import { getLaundryById } from '../apicalls/laundry';
 import { createOrder, validateCoupon } from '../apicalls/order';
+import { getLaundryCoupons } from '../apicalls/coupon';
+import PaymentModal from '../component/PaymentModal';
 import { Domain, formatTime12H } from '../utels/const';
 import {
   ArrowLeft,
@@ -24,7 +26,8 @@ import {
   CheckCircle,
   AlertCircle,
   ShoppingBag,
-  Ticket
+  Ticket,
+  CreditCard
 } from 'lucide-react';
 
 function LaundryServices() {
@@ -33,6 +36,7 @@ function LaundryServices() {
 
   const [laundry, setLaundry] = useState(null);
   const [services, setServices] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,12 +53,13 @@ function LaundryServices() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderNotes, setOrderNotes] = useState('عايز تنظيف سريع');
-  const [orderPaymentMethod, setOrderPaymentMethod] = useState('stripe');
   const [couponCode, setCouponCode] = useState('');
   const [couponResult, setCouponResult] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [activePaymentOrder, setActivePaymentOrder] = useState(null);
 
   // Form states for add/edit service
   const [formTitle, setFormTitle] = useState('');
@@ -66,6 +71,8 @@ function LaundryServices() {
   const [imagePreview, setImagePreview] = useState(null);
 
   const currentUserId = Cookies.get('userId');
+  const userRole = localStorage.getItem('userRole') || Cookies.get('userRole');
+  const isClient = userRole?.toLowerCase() === 'client';
   const isOwner = laundry && (laundry.ownerId?._id === currentUserId || laundry.ownerId === currentUserId);
 
   const fetchLaundryAndServices = async () => {
@@ -92,6 +99,15 @@ function LaundryServices() {
 
       const servicesData = await res.json();
       setServices(servicesData);
+
+      // Fetch Laundry Coupons
+      try {
+        const couponsData = await getLaundryCoupons(laundryId);
+        setCoupons(Array.isArray(couponsData) ? couponsData : []);
+      } catch (couponErr) {
+        console.warn('Could not fetch coupons for laundry:', couponErr);
+        setCoupons([]);
+      }
     } catch (err) {
       console.error(err);
       setError(err.message || 'Something went wrong while loading data.');
@@ -115,11 +131,10 @@ function LaundryServices() {
   };
 
   // Open Order Modal
-  const openOrderModal = async (service) => {
+  const openOrderModal = async (service, initialCouponCode = '') => {
     setSelectedOrderService(service);
     setOrderNotes('عايز تنظيف سريع');
-    setOrderPaymentMethod('stripe');
-    setCouponCode('');
+    setCouponCode(initialCouponCode);
     setCouponResult(null);
     setCouponError('');
 
@@ -140,6 +155,29 @@ function LaundryServices() {
     }
 
     setShowOrderModal(true);
+
+    if (initialCouponCode && initialCouponCode.trim()) {
+      try {
+        setCouponLoading(true);
+        const res = await validateCoupon(initialCouponCode.trim(), laundryId);
+        const basePrice = Number(service?.price) || 0;
+        let discount = 0;
+        if (res.discountType === 'percentage') {
+          discount = (basePrice * (res.discountValue || 0)) / 100;
+          if (res.maxDiscountAmount && res.maxDiscountAmount > 0) {
+            discount = Math.min(discount, res.maxDiscountAmount);
+          }
+        } else if (res.discountType === 'fixed') {
+          discount = res.discountValue || 0;
+        }
+        const priceAfterDiscount = Math.max(0, basePrice - discount);
+        setCouponResult({ ...res, discount, priceAfterDiscount });
+      } catch (err) {
+        setCouponError(err.message || 'Invalid coupon code');
+      } finally {
+        setCouponLoading(false);
+      }
+    }
   };
 
   // Validate Coupon
@@ -175,39 +213,32 @@ function LaundryServices() {
     if (!selectedOrderService) return;
     setSubmittingOrder(true);
     try {
-      const payload = {
+      const orderPayload = {
         laundryId: laundryId,
         serviceId: selectedOrderService._id,
         customerName: customerName,
         phone: customerPhone,
         address: customerAddress,
         notes: orderNotes,
-        paymentMethod: orderPaymentMethod,
+        paymentMethod: 'paymob',
       };
       if (couponCode.trim()) {
-        payload.couponCode = couponCode.trim();
+        orderPayload.couponCode = couponCode.trim();
       }
 
-      const res = await createOrder(payload);
-
+      const res = await createOrder(orderPayload);
       setShowOrderModal(false);
 
-      let successMessage = `Order #${res.orderId?.slice(-8)} created successfully!`;
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Order Placed!',
-        text: successMessage,
-        showCancelButton: true,
-        confirmButtonText: 'View My Orders',
-        cancelButtonText: 'Close',
-        confirmButtonColor: '#4f46e5',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/profile');
-        }
+      const createdOrderId = res.orderId || res._id || res.savedOrder?._id;
+      setActivePaymentOrder({
+        _id: createdOrderId,
+        totalAmount: res.savedOrder?.totalAmount || couponResult?.priceAfterDiscount || selectedOrderService.price,
+        serviceId: { title: selectedOrderService.title },
+        laundryId: { name: laundry?.name },
       });
+      setShowPaymentModal(true);
     } catch (err) {
+      console.error('Order Placement Error:', err);
       Swal.fire({
         icon: 'error',
         title: 'Order Failed',
@@ -287,7 +318,13 @@ function LaundryServices() {
     setFormDiscount(service.discount || '');
     setFormActive(service.active !== false);
     setFormImage(null);
-    setImagePreview(service.image ? (service.image.startsWith('http') ? service.image : `${Domain}/uploads/services/${service.image}`) : null);
+    setImagePreview(
+      service.imageUrl
+        ? service.imageUrl
+        : service.image
+        ? (service.image.startsWith('http') ? service.image : `${Domain}/uploads/services/${service.image}`)
+        : null
+    );
     setShowEditModal(true);
   };
 
@@ -385,16 +422,34 @@ function LaundryServices() {
     }
   };
 
-  const getLogoUrl = (logo) => {
-    if (!logo) return null;
-    if (logo.startsWith('http')) return logo;
-    return `${Domain}/uploads/laundries/${logo}`;
+  const isCouponValid = (c) => {
+    if (!c || c.isActive === false) return false;
+    // Expiration date check
+    if (c.expiresAt && new Date() > new Date(c.expiresAt)) return false;
+    // Valid from date check
+    if (c.validFrom && new Date() < new Date(c.validFrom)) return false;
+    // Usage limit check
+    const usageLimit = Number(c.usageLimit) || 0;
+    const usedCount = Number(c.usedCount) || 0;
+    if (usageLimit > 0 && usedCount >= usageLimit) return false;
+
+    return true;
   };
 
-  const getServiceImageUrl = (image) => {
-    if (!image) return null;
-    if (image.startsWith('http')) return image;
-    return `${Domain}/uploads/services/${image}`;
+  const getLogoUrl = (laundry) => {
+    if (!laundry) return null;
+    if (laundry.logoUrl) return laundry.logoUrl;
+    if (!laundry.logo) return null;
+    if (laundry.logo.startsWith('http')) return laundry.logo;
+    return `${Domain}/uploads/laundries/${laundry.logo}`;
+  };
+
+  const getServiceImageUrl = (service) => {
+    if (!service) return null;
+    if (service.imageUrl) return service.imageUrl;
+    if (!service.image) return null;
+    if (service.image.startsWith('http')) return service.image;
+    return `${Domain}/uploads/services/${service.image}`;
   };
 
   const filteredServices = services.filter(service =>
@@ -438,7 +493,7 @@ function LaundryServices() {
           <div className="flex items-center gap-5">
             <div className="h-20 w-20 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-lg flex-shrink-0">
               {laundry.logo ? (
-                <img src={getLogoUrl(laundry.logo)} alt={laundry.name} className="h-full w-full object-cover" />
+                <img src={getLogoUrl(laundry)} alt={laundry.name} className="h-full w-full object-cover" />
               ) : (
                 <Sparkles className="text-indigo-300" size={36} />
               )}
@@ -535,10 +590,20 @@ function LaundryServices() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map((service) => {
-              const imageUrl = getServiceImageUrl(service.image);
+              const imageUrl = getServiceImageUrl(service);
               const discountAmount = Number(service.discount) || 0;
               const originalPrice = Number(service.price) || 0;
               const finalPrice = discountAmount > 0 ? Math.max(0, originalPrice - discountAmount) : originalPrice;
+
+              // Find active and valid coupon applicable for this service or all services in this laundry
+              const serviceCoupon = coupons.find(c =>
+                isCouponValid(c) && (
+                  String(c.serviceId) === String(service._id) ||
+                  String(c.serviceId?._id) === String(service._id) ||
+                  c.appliesTo === 'all_services' ||
+                  !c.serviceId
+                )
+              );
 
               return (
                 <div
@@ -546,11 +611,23 @@ function LaundryServices() {
                   className={`bg-white rounded-2xl border ${service.active ? 'border-gray-200 shadow-sm' : 'border-dashed border-gray-300 opacity-75'} overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col group relative`}
                 >
                   {/* Discount Badge */}
-                  {discountAmount > 0 && (
+                  {discountAmount > 0 ? (
                     <span className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider z-10 shadow-sm">
                       -{discountAmount} EGP Off
                     </span>
-                  )}
+                  ) : serviceCoupon ? (
+                    /* Circular Coupon Code Badge (Contains only coupon code) */
+                    <div
+                      className="absolute top-3 left-3 min-w-[2.5rem] h-10 px-2.5 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white shadow-md border-2 border-white/90 flex items-center justify-center font-mono font-extrabold text-xs tracking-wider z-10 cursor-pointer hover:scale-105 transition-transform"
+                      title={`Coupon Code: ${serviceCoupon.code}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isClient) openOrderModal(service, serviceCoupon.code);
+                      }}
+                    >
+                      {serviceCoupon.code}
+                    </div>
+                  ) : null}
 
                   {/* Image Header */}
                   <div className="h-44 w-full bg-slate-100 relative overflow-hidden flex items-center justify-center border-b border-gray-100">
@@ -565,8 +642,8 @@ function LaundryServices() {
 
                     {/* Active Status Badge */}
                     <span className={`absolute top-3 right-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider z-10 shadow-sm ${service.active
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gray-500 text-white'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-500 text-white'
                       }`}>
                       {service.active ? 'Active' : 'Inactive'}
                     </span>
@@ -581,6 +658,47 @@ function LaundryServices() {
                       {service.description}
                     </p>
 
+                    {/* Coupon Promo Box inside Service Box */}
+                    {serviceCoupon && (
+                      <div className="mt-3.5 p-3 bg-gradient-to-r from-amber-50 via-orange-50/80 to-amber-50 rounded-xl border border-amber-200/90 flex items-center justify-between gap-2 shadow-xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Circular Coupon Badge */}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center font-black text-xs shadow-md shrink-0 border border-amber-300/90 animate-pulse">
+                            <Ticket size={15} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[11px] font-extrabold text-amber-950 uppercase tracking-wider">
+                                Coupon Code:
+                              </span>
+                              <span className="bg-amber-200/90 text-amber-950 text-[11px] font-mono font-black px-1.5 py-0.5 rounded border border-amber-300 tracking-wider">
+                                {serviceCoupon.code}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-amber-800 font-semibold truncate mt-0.5">
+                              Discount available with coupon ({serviceCoupon.discountType === 'percentage'
+                                ? `${serviceCoupon.discountValue}% OFF`
+                                : `${serviceCoupon.discountValue} EGP OFF`})
+                            </p>
+                          </div>
+                        </div>
+
+                        {isClient && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openOrderModal(service, serviceCoupon.code);
+                            }}
+                            className="text-[10px] font-extrabold bg-amber-600 hover:bg-amber-700 active:scale-95 text-white py-1 px-2.5 rounded-lg shadow-sm transition shrink-0 flex items-center gap-1"
+                            title="Apply coupon code"
+                          >
+                            <span>Use Coupon</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Pricing and Action */}
                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
                       <div>
@@ -594,12 +712,14 @@ function LaundryServices() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => openOrderModal(service)}
-                          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow-md transition transform active:scale-95"
-                        >
-                          <ShoppingBag size={14} /> Order Now
-                        </button>
+                        {isClient && (
+                          <button
+                            onClick={() => openOrderModal(service, serviceCoupon?.code || '')}
+                            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow-md transition transform active:scale-95"
+                          >
+                            <ShoppingBag size={14} /> Order Now
+                          </button>
+                        )}
 
                         {isOwner && (
                           <div className="flex gap-1.5">
@@ -762,32 +882,11 @@ function LaundryServices() {
               {/* Payment Method */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                  Payment Method *
+                  Payment Method
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: 'stripe', label: 'Stripe (Card)' },
-                    { id: 'card', label: 'Card on Pickup' },
-                    { id: 'online', label: 'Online Payment' },
-                  ].map((m) => (
-                    <label
-                      key={m.id}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition text-xs font-bold ${orderPaymentMethod === m.id
-                          ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-sm'
-                          : 'border-gray-200 hover:bg-gray-50 text-gray-700'
-                        }`}
-                    >
-                      <span>{m.label}</span>
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={m.id}
-                        checked={orderPaymentMethod === m.id}
-                        onChange={(e) => setOrderPaymentMethod(e.target.value)}
-                        className="accent-indigo-600"
-                      />
-                    </label>
-                  ))}
+                <div className="p-3 rounded-xl border border-indigo-600 bg-indigo-50/50 text-indigo-900 shadow-sm flex items-center gap-2 text-xs font-bold">
+                  <CreditCard size={16} />
+                  <span>💳 Credit / Debit Card via Paymob</span>
                 </div>
               </div>
 
@@ -1034,6 +1133,13 @@ function LaundryServices() {
         </div>
       )}
 
+      {/* Payment Modal */}
+      {showPaymentModal && activePaymentOrder && (
+        <PaymentModal
+          order={activePaymentOrder}
+          onClose={() => setShowPaymentModal(false)}
+        />
+      )}
     </div>
   );
 }

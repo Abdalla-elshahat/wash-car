@@ -11,14 +11,21 @@ import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import { deleteAccount } from "../../apicalls/users";
 import { getClientOrders, cancelClientOrder } from "../../apicalls/order";
+import PaymentModal from "../../component/PaymentModal";
 
-function getLaundryLogoUrl(logo) {
+function getLaundryLogoUrl(laundry) {
+  if (!laundry) return null;
+  if (laundry.logoUrl) return laundry.logoUrl;
+  const logo = laundry.logo;
   if (!logo) return null;
   if (logo.startsWith("http")) return logo;
   return `${Domain}/uploads/laundries/${logo}`;
 }
 
-function getServiceImgUrl(img) {
+function getServiceImgUrl(service) {
+  if (!service) return null;
+  if (service.imageUrl) return service.imageUrl;
+  const img = service.image;
   if (!img) return null;
   if (img.startsWith("http")) return img;
   if (img.startsWith("uploads/")) return `${Domain}/${img}`;
@@ -45,6 +52,7 @@ function Profile() {
   const [clientOrdersPage, setClientOrdersPage] = useState(1);
   const [clientOrdersTotalPages, setClientOrdersTotalPages] = useState(1);
   const [clientOrdersTotalItems, setClientOrdersTotalItems] = useState(0);
+  const [selectedPayOrder, setSelectedPayOrder] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -59,7 +67,9 @@ function Profile() {
         setFullname(data.fullname || "");
         setPhone(data.phone || "");
         setImagePreview(
-          data.profileImage
+          data.profileImageUrl
+            ? data.profileImageUrl
+            : data.profileImage
             ? `${Domain}/uploads/users/${data.profileImage}`
             : "https://www.w3schools.com/howto/img_avatar.png"
         );
@@ -348,15 +358,17 @@ function Profile() {
             >
               Edit Profile
             </button>
-            <button
-              onClick={() => setActiveTab("orders")}
-              className={`pb-4 text-sm font-semibold tracking-wide transition-all duration-200 border-b-2 ${activeTab === "orders"
-                ? "border-indigo-600 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-900"
-                }`}
-            >
-              My Orders ({clientOrdersTotalItems || userData.orders?.length || 0})
-            </button>
+            {(userData?.role?.toLowerCase() === "client" || (localStorage.getItem("userRole"))?.toLowerCase() === "client") && (
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`pb-4 text-sm font-semibold tracking-wide transition-all duration-200 border-b-2 ${activeTab === "orders"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-900"
+                  }`}
+              >
+                My Orders ({clientOrdersTotalItems || userData?.orders?.length || 0})
+              </button>
+            )}
           </div>
 
           {/* Card Content Section */}
@@ -414,34 +426,36 @@ function Profile() {
                 </div>
 
                 {/* Activity Overview */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-gray-900">Activity Overview</h3>
-                  <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl text-white shadow-lg space-y-4">
-                    <div className="flex justify-between items-start">
-                      <Award className="w-8 h-8 opacity-80" />
-                      <button
-                        onClick={() => setActiveTab("orders")}
-                        className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs font-semibold border border-white/20 transition flex items-center gap-1.5"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5" /> View My Orders
-                      </button>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black">
-                        {clientOrdersTotalItems || userData.orders?.length || 0}
-                      </p>
-                      <p className="text-xs text-indigo-100 font-medium mt-1 uppercase tracking-wide">
-                        Total Wash Orders
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-white/10 text-xs text-indigo-100 flex items-center justify-between">
-                      <span>Status</span>
-                      <span className="font-semibold text-white">
-                        {userData.isVerified ? "Verified Account" : "Verification Pending"}
-                      </span>
+                {(localStorage.getItem("userRole") === "client") && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-bold text-gray-900">Activity Overview</h3>
+                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl text-white shadow-lg space-y-4">
+                      <div className="flex justify-between items-start">
+                        <Award className="w-8 h-8 opacity-80" />
+                        <button
+                          onClick={() => setActiveTab("orders")}
+                          className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs font-semibold border border-white/20 transition flex items-center gap-1.5"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" /> View My Orders
+                        </button>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-black">
+                          {clientOrdersTotalItems || userData.orders?.length || 0}
+                        </p>
+                        <p className="text-xs text-indigo-100 font-medium mt-1 uppercase tracking-wide">
+                          Total Wash Orders
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t border-white/10 text-xs text-indigo-100 flex items-center justify-between">
+                        <span>Status</span>
+                        <span className="font-semibold text-white">
+                          {userData.isVerified ? "Verified Account" : "Verification Pending"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -600,7 +614,7 @@ function Profile() {
                             <div className="flex items-start space-x-3">
                               {order.laundryId?.logo ? (
                                 <img
-                                  src={getLaundryLogoUrl(order.laundryId.logo)}
+                                  src={getLaundryLogoUrl(order.laundryId)}
                                   alt={order.laundryId.name}
                                   className="w-12 h-12 rounded-xl object-cover border border-gray-200 bg-gray-50 shrink-0"
                                 />
@@ -629,7 +643,7 @@ function Profile() {
                             <div className="flex items-start space-x-3">
                               {order.serviceId?.image ? (
                                 <img
-                                  src={getServiceImgUrl(order.serviceId.image)}
+                                  src={getServiceImgUrl(order.serviceId)}
                                   alt={order.serviceId.title}
                                   className="w-12 h-12 rounded-xl object-cover border border-gray-200 bg-gray-50 shrink-0"
                                 />
@@ -684,19 +698,39 @@ function Profile() {
                         </div>
 
                         {/* Right Column: Actions */}
-                        {(order.status === "pending" || order.status === "accepted") && (
-                          <div className="flex justify-end items-center shrink-0">
+                        <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                          {/* {order.paymentStatus !== "paid" && order.status !== "cancelled" && (
+                            <button
+                              onClick={() => setSelectedPayOrder(order)}
+                              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 transition flex items-center gap-1.5"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" /> Pay Now
+                            </button>
+                          )} */}
+                          {(order.status === "pending" || order.status === "accepted") && (
                             <button
                               onClick={() => handleCancelOrder(order._id)}
                               className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition"
                             >
                               Cancel Order
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+                )}
+
+                {/* Payment Modal */}
+                {selectedPayOrder && (
+                  <PaymentModal
+                    order={selectedPayOrder}
+                    onClose={() => setSelectedPayOrder(null)}
+                    onSuccess={() => {
+                      setSelectedPayOrder(null);
+                      fetchClientOrders(clientOrdersPage);
+                    }}
+                  />
                 )}
 
                 {/* Pagination */}

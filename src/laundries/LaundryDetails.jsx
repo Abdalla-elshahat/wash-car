@@ -57,10 +57,12 @@ function parseLaundryFields(laundry) {
   return parsed;
 }
 
-function getLogo(logo) {
-  if (!logo) return null;
-  if (logo.startsWith("http")) return logo;
-  return `${Domain}/uploads/laundries/${logo}`;
+function getLogo(laundry) {
+  if (!laundry) return null;
+  if (laundry.logoUrl) return laundry.logoUrl;
+  if (!laundry.logo) return null;
+  if (laundry.logo.startsWith("http")) return laundry.logo;
+  return `${Domain}/uploads/laundries/${laundry.logo}`;
 }
 
 function formatDate(iso) {
@@ -117,9 +119,7 @@ function DeleteModal({ laundryName, onClose, onConfirm, deleting, error }) {
 
 /* ─── Edit Modal ─── */
 function EditModal({ laundry, onClose, onUpdated }) {
-  const existingLogo = laundry.logo
-    ? (laundry.logo.startsWith("http") ? laundry.logo : `${Domain}/uploads/laundries/${laundry.logo}`)
-    : null;
+  const existingLogo = getLogo(laundry);
 
   const [form, setForm] = useState({
     name:        laundry.name        ?? "",
@@ -865,7 +865,7 @@ export default function LaundryDetails() {
 
   const status  = statusConfig[laundry.status] ?? statusConfig.pending;
   const StatusIcon = status.icon;
-  const logoUrl = getLogo(laundry.logo);
+  const logoUrl = getLogo(laundry);
   const [lng, lat] = laundry.location?.coordinates ?? [];
 
   return (
@@ -1047,7 +1047,9 @@ export default function LaundryDetails() {
                 <div className="det-reviews-list">
                   {reviews.map((rev) => {
                     const client = rev.clientId || {};
-                    const avatarUrl = client.profileImage
+                    const avatarUrl = client.profileImageUrl
+                      ? client.profileImageUrl
+                      : client.profileImage
                       ? (client.profileImage.startsWith("http") ? client.profileImage : `${Domain}/uploads/users/${client.profileImage}`)
                       : "https://www.w3schools.com/howto/img_avatar.png";
                     

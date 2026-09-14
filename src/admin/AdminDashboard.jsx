@@ -178,16 +178,20 @@ export default function AdminDashboard() {
     }
   };
 
-  const getUserAvatar = (image) => {
-    if (!image) return "https://www.w3schools.com/howto/img_avatar.png";
-    if (image.startsWith("http")) return image;
-    return `${Domain}/uploads/users/${image}`;
+  const getUserAvatar = (user) => {
+    if (!user) return "https://www.w3schools.com/howto/img_avatar.png";
+    if (user.profileImageUrl) return user.profileImageUrl;
+    if (!user.profileImage) return "https://www.w3schools.com/howto/img_avatar.png";
+    if (user.profileImage.startsWith("http")) return user.profileImage;
+    return `${Domain}/uploads/users/${user.profileImage}`;
   };
 
-  const getLaundryLogo = (logo) => {
-    if (!logo) return null;
-    if (logo.startsWith("http")) return logo;
-    return `${Domain}/uploads/laundries/${logo}`;
+  const getLaundryLogo = (laundry) => {
+    if (!laundry) return null;
+    if (laundry.logoUrl) return laundry.logoUrl;
+    if (!laundry.logo) return null;
+    if (laundry.logo.startsWith("http")) return laundry.logo;
+    return `${Domain}/uploads/laundries/${laundry.logo}`;
   };
 
   return (
@@ -521,7 +525,7 @@ export default function AdminDashboard() {
                         <td className="py-3.5 pr-3">
                           <div className="flex items-center gap-3">
                             <img
-                              src={getUserAvatar(user.profileImage)}
+                              src={getUserAvatar(user)}
                               alt={user.fullname}
                               className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-600"
                             />
@@ -603,7 +607,7 @@ export default function AdminDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {laundriesData.data.map((laundry) => {
-                  const logo = getLaundryLogo(laundry.logo);
+                  const logo = getLaundryLogo(laundry);
                   return (
                     <div
                       key={laundry._id}
@@ -752,7 +756,7 @@ export default function AdminDashboard() {
                           ${ord.totalAmount || 0}
                         </td>
                         <td className="py-3.5 pr-3 text-slate-600 dark:text-slate-400 capitalize">
-                          {ord.paymentMethod || "Cash/Online"}
+                          {ord.paymentMethod || "Paymob/Card"}
                         </td>
                         <td className="py-3.5">
                           <span

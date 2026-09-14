@@ -33,10 +33,12 @@ const statusConfig = {
   rejected: { label: "Rejected", icon: XCircle, className: "status-rejected" },
 };
 
-function getLaundryLogo(logo) {
-  if (!logo) return null;
-  if (logo.startsWith("http")) return logo;
-  return `${Domain}/uploads/laundries/${logo}`;
+function getLaundryLogo(laundry) {
+  if (!laundry) return null;
+  if (laundry.logoUrl) return laundry.logoUrl;
+  if (!laundry.logo) return null;
+  if (laundry.logo.startsWith("http")) return laundry.logo;
+  return `${Domain}/uploads/laundries/${laundry.logo}`;
 }
 
 function parseLaundryFields(laundry) {
@@ -505,7 +507,7 @@ function AddLaundryModal({ onClose, onCreated }) {
 function LaundryCard({ laundry, onOpenDocs }) {
   const status = statusConfig[laundry.status] ?? statusConfig.pending;
   const StatusIcon = status.icon;
-  const logoUrl = getLaundryLogo(laundry.logo);
+  const logoUrl = getLaundryLogo(laundry);
 
   return (
     <div className="laundry-card">

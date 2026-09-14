@@ -149,10 +149,12 @@ function Clients() {
     }
   };
 
-  const getUserAvatar = (profileImage) => {
-    if (!profileImage) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80';
-    if (profileImage.startsWith('http')) return profileImage;
-    return `${Domain}/uploads/users/${profileImage}`;
+  const getUserAvatar = (user) => {
+    if (!user) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80';
+    if (user.profileImageUrl) return user.profileImageUrl;
+    if (!user.profileImage) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80';
+    if (user.profileImage.startsWith('http')) return user.profileImage;
+    return `${Domain}/uploads/users/${user.profileImage}`;
   };
 
   // Client side filtration matching search query, role filter, status filter
@@ -395,7 +397,7 @@ function Clients() {
                       {/* Avatar */}
                       <div className="relative self-start mb-4">
                         <img
-                          src={getUserAvatar(user.profileImage)}
+                          src={getUserAvatar(user)}
                           alt={user.fullname}
                           className="w-18 h-18 rounded-2xl object-cover border-4 border-white shadow-md bg-gray-100"
                         />
@@ -509,7 +511,7 @@ function Clients() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <img
-                                src={getUserAvatar(user.profileImage)}
+                                src={getUserAvatar(user)}
                                 alt={user.fullname}
                                 className="w-10 h-10 rounded-xl object-cover bg-gray-100 shrink-0 shadow-sm"
                               />

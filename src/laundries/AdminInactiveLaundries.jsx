@@ -379,10 +379,12 @@ export default function AdminInactiveLaundries() {
     }
   };
 
-  const getLogoUrl = (logo) => {
-    if (!logo) return null;
-    if (logo.startsWith("http")) return logo;
-    return `${Domain}/uploads/laundries/${logo}`;
+  const getLogoUrl = (laundry) => {
+    if (!laundry) return null;
+    if (laundry.logoUrl) return laundry.logoUrl;
+    if (!laundry.logo) return null;
+    if (laundry.logo.startsWith("http")) return laundry.logo;
+    return `${Domain}/uploads/laundries/${laundry.logo}`;
   };
 
   return (
@@ -425,7 +427,7 @@ export default function AdminInactiveLaundries() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {laundries.map((laundry) => {
-              const logoUrl = getLogoUrl(laundry.logo);
+              const logoUrl = getLogoUrl(laundry);
               return (
                 <div
                   key={laundry._id}

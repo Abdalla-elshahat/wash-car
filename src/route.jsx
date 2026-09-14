@@ -20,6 +20,7 @@ import PrivateRoute from './PrivateRoute'
 import PublicRoute from './PublicRoute'
 import Navbar from './component/Navbar/Navbar'
 import Footer from './component/Footer/Footer'
+import PaymentCallback from './component/PaymentCallback'
 
 function Routeapp() {
   const location = useLocation();
@@ -43,6 +44,7 @@ function Routeapp() {
           <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
           <Route path="/services/:laundryId" element={<PrivateRoute><LaundryServices /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/payment/callback" element={<PrivateRoute><PaymentCallback /></PrivateRoute>} />
           <Route path="/laundries/owner" element={<PrivateRoute><OwnerLaundries /></PrivateRoute>} />
           <Route path="/laundries/:id" element={<PrivateRoute><LaundryDetails /></PrivateRoute>} />
           <Route path="/admin/dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />

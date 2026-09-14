@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import Cookies from "js-cookie";
 import { getOrdersByLaundryId, updateOrderStatus } from "../apicalls/order";
 import { getOwnerLaundries } from "../apicalls/laundry";
 import {
@@ -19,12 +20,13 @@ const STATUS_OPTIONS = [
 
 const PAYMENT_METHODS = [
   { label: "All Payment Methods", value: "" },
-  { label: "Card", value: "card" },
-  { label: "Online", value: "online" },
-  { label: "Stripe", value: "stripe" },
+  { label: "Paymob / Card", value: "paymob" },
 ];
 
 export default function Orders() {
+  const userRole = (localStorage.getItem("userRole") || Cookies.get("userRole") || "").toLowerCase();
+  const isLaundryOwner = userRole === "laundry_owner" || userRole === "laundryowner" || userRole === "landryowner";
+
   const [searchParams] = useSearchParams();
   const laundryIdFromQuery = searchParams.get("laundryId");
 
@@ -300,12 +302,27 @@ export default function Orders() {
                       <div>
                         <span className="text-xs font-semibold text-slate-400 uppercase">Payment</span>
                         <p className="font-semibold text-slate-800 capitalize">
-                          {order.paymentMethod || "N/A"} ({order.paymentStatus || "pending"})
+                          {order.paymentMethod?.replace('_', ' ') || "N/A"} ({order.paymentStatus || "pending"})
                         </p>
                         {order.discountAmount > 0 && (
                           <p className="text-xs text-emerald-600 font-medium">
                             Discount: -${order.discountAmount}
                           </p>
+                        )}
+                        {order.platformFee !== undefined && !isLaundryOwner && (
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            Platform Fee: {order.platformFee} EGP | Laundry Net: {order.laundryEarning} EGP
+                          </p>
+                        )}
+                        {order.paymentReceipt && (
+                          <a
+                            href={order.paymentReceipt.startsWith("http") ? order.paymentReceipt : `http://localhost:4000${order.paymentReceipt}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 underline bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100"
+                          >
+                            📄 View Payment Receipt
+                          </a>
                         )}
                       </div>
                     </div>
